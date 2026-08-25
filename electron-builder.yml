@@ -7,8 +7,25 @@ files:
 asarUnpack:
   - assets/tray/**/*
 linux:
+  # Lowercase executable + .desktop basename (geminiharness.desktop).
+  # Icon theme install uses the same name under hicolor.
+  executableName: geminiharness
+  # SVG → /usr/share/icons/hicolor/scalable/apps/geminiharness.svg (FpmTarget).
+  # Desktop entry Icon= is the base name, not a filesystem path.
+  icon: build/icon.svg
+  maintainer: parasite6 <myworkforstore@proton.me>
+  # Keep installed .desktop basename aligned with package.json desktopName.
+  syncDesktopName: true
   target:
     - rpm
   category: Network
   executableArgs:
     - --ozone-platform=x11
+  desktop:
+    entry:
+      Name: GeminiHarness
+      Comment: A lightweight desktop wrapper for a logged-in gemini.google.com session.
+      Icon: geminiharness
+      Categories: Network;
+      # Match Electron productName / app.setName for window↔launcher association.
+      StartupWMClass: GeminiHarness

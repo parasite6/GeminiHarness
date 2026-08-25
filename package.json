@@ -1,7 +1,8 @@
 {
   "name": "geminiharness",
   "productName": "GeminiHarness",
-  "version": "0.1.0",
+  "desktopName": "geminiharness.desktop",
+  "version": "1.0.0",
   "description": "A lightweight desktop wrapper for a logged-in gemini.google.com session.",
   "main": "src/main/main.js",
   "author": "parasite6",
