@@ -5,9 +5,11 @@
 This app is a desktop wrapper around your own logged-in gemini.google.com
 session — an Electron shell, a tray icon, and window plumbing. It does not
 proxy, intercept, or modify network traffic to Google, does not spoof the
-user agent, does not inject scripts or CSS into the page, and does not
-execute anything on Gemini's behalf. It stores no credentials of its own;
-auth is Google's normal sign-in flow inside the embedded Chromium session
+user agent, does not inject scripts, and does not execute anything on
+Gemini's behalf. It does inject a small layout CSS inset so Gemini’s
+fixed header sits below the custom title-bar overlay (zoom-scaled; not
+theming or scraping). It stores no credentials of its own; auth is
+Google's normal sign-in flow inside the embedded Chromium session
 (`persist:gemini`).
 
 Top-level navigations and `window.open` / `target=_blank` are filtered:
@@ -20,9 +22,9 @@ Top-level navigations and `window.open` / `target=_blank` are filtered:
   `shell.openExternal`, and only for `http:` / `https:` URLs.
 
 Given that scope, the realistic attack surface is local: the Electron shell,
-on-disk session and window state under the app userData directory, tray /
-single-instance behavior, and (when implemented) how dropped files are
-handled.
+on-disk session and window state under the app userData directory, the
+optional XDG autostart `.desktop` entry, tray / single-instance behavior,
+and (when implemented) how dropped files are handled.
 
 ## Data on disk
 
@@ -31,6 +33,12 @@ Under the app userData path (typically `~/.config/GeminiHarness` on Linux):
 - Chromium partition data for `persist:gemini` (cookies, local storage, etc.
   for the embedded Google session)
 - `window-state.json` (geometry, maximize, zoom — not credentials)
+
+Outside userData, if **Start on Login** is enabled:
+
+- `~/.config/autostart/GeminiHarness.desktop` (Exec points at this app
+  with `--hidden`; not credentials). Disabling via the tray deletes the
+  file; GNOME Startup Applications may instead set `Hidden=true`.
 
 ## Supported Versions
 

@@ -22,8 +22,9 @@ npm test
 
 - **Session** — Chromium partition `persist:gemini` under the app userData directory. Sign-in is Google’s normal flow inside the window (no API keys, no credential storage of our own).
 - **In-app hosts** — Top-level navigation stays in the window for `gemini.google.com`, `accounts.google.com`, and `accounts.youtube.com` (post-2FA SID sync). Other links (including Gemini Sources and `www.google.com`) open in your default browser.
-- **Window** — Size, position, maximize, and zoom are saved to `window-state.json`. Closing the window hides to the tray; **Quit Gemini** in the tray menu fully exits. Only one instance runs; a second launch focuses the existing window.
-- **Tray** — StatusNotifierItem (AppIndicator). Menu: Open Window / Quit Gemini.
+- **Window** — Size, position, maximize, and zoom are saved to `window-state.json`. The GTK title bar is hidden in favor of a dark overlay so window controls match Gemini’s theme. Closing the window hides to the tray; **Quit Gemini** in the tray menu fully exits. Only one instance runs; a second launch focuses the existing window unless that launch was `--hidden` (autostart / tray-only).
+- **Tray** — StatusNotifierItem (AppIndicator). Menu: **Open Window**, **Start on Login**, **Quit Gemini**.
+- **Start on Login** — Writes or removes `~/.config/autostart/GeminiHarness.desktop`. Enabled login launches are tray-only (`--hidden`); the window stays closed until you open it from the tray. The checkbox follows the file on disk, including GNOME Startup Applications setting `Hidden=true` without deleting the entry.
 
 ## GNOME tray note
 
