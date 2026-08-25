@@ -7,6 +7,7 @@
   "main": "src/main/main.js",
   "author": "parasite6",
   "license": "MIT",
+  "homepage": "https://github.com/parasite6/GeminiHarness",
   "scripts": {
     "start": "electron . --ozone-platform=x11",
     "test": "node --test",
