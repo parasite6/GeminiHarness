@@ -3,6 +3,7 @@ const {
   createWindow,
   getMainWindow,
   showMainWindow,
+  toggleMainWindow,
   flushWindowState,
   setAppQuitting,
   hasWindowEverShown,
@@ -49,8 +50,8 @@ function handleSecondInstance(commandLine) {
     pendingShowFromSecondInstance = true;
     return;
   }
-  if (action === 'show') {
-    showMainWindow();
+  if (action === 'toggle') {
+    toggleMainWindow();
   }
 }
 
@@ -64,7 +65,7 @@ app.on('web-contents-created', (_event, contents) => {
 
 app.whenReady().then(() => {
   // Autostart launches with --hidden: tray only, no window until the user
-  // opens one via the menu (or a future hotkey).
+  // opens one via the menu or the opt-in Super+G hotkey.
   const hidden = wantsHiddenLaunch();
   primaryLaunchedHidden = hidden;
   if (hidden) {

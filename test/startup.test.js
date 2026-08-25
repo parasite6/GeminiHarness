@@ -71,7 +71,7 @@ describe('classifySecondInstance', () => {
     );
   });
 
-  it('shows after the grace window even if still tray-only', () => {
+  it('toggles after the grace window even if still tray-only', () => {
     assert.equal(
       classifySecondInstance({
         isReady: true,
@@ -81,11 +81,11 @@ describe('classifySecondInstance', () => {
         hiddenLaunchAt: 1000,
         now: 1000 + HIDDEN_LAUNCH_GRACE_MS,
       }),
-      'show',
+      'toggle',
     );
   });
 
-  it('shows during grace if the user already opened a window', () => {
+  it('toggles during grace if the user already opened a window', () => {
     assert.equal(
       classifySecondInstance({
         isReady: true,
@@ -95,11 +95,11 @@ describe('classifySecondInstance', () => {
         hiddenLaunchAt: 1000,
         now: 1000 + 1,
       }),
-      'show',
+      'toggle',
     );
   });
 
-  it('shows a normal second launch when the primary was not hidden', () => {
+  it('toggles a normal second launch when the primary was not hidden', () => {
     assert.equal(
       classifySecondInstance({
         isReady: true,
@@ -109,7 +109,7 @@ describe('classifySecondInstance', () => {
         hiddenLaunchAt: null,
         now: 5000,
       }),
-      'show',
+      'toggle',
     );
   });
 });

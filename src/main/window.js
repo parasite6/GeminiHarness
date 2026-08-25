@@ -434,10 +434,20 @@ function showMainWindow() {
   return win;
 }
 
+function toggleMainWindow() {
+  const win = mainWindow;
+  if (win && !win.isDestroyed() && win.isVisible()) {
+    win.hide();
+    return win;
+  }
+  return showMainWindow();
+}
+
 module.exports = {
   createWindow,
   getMainWindow,
   showMainWindow,
+  toggleMainWindow,
   flushWindowState,
   setAppQuitting,
   markWindowEverShown,

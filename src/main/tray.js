@@ -9,6 +9,7 @@ const {
   resolveCurrentExecLine,
   shouldWatchAutostartFilename,
 } = require('./autostart');
+const { isHotkeyEnabled, setHotkeyEnabled } = require('./hotkey');
 const {
   AUTOSTART_MENU_SYNC_MS,
   attachTrayMenuRefresh,
@@ -41,6 +42,24 @@ function resolveAutostartExec() {
   });
 }
 
+function resolveHotkeyCommand() {
+  return resolveCurrentExecLine({
+    isPackaged: app.isPackaged,
+    execPath: process.execPath,
+    appPath: app.getAppPath(),
+    includeHidden: false,
+  });
+}
+
+function readHotkeyEnabledSafe() {
+  try {
+    return isHotkeyEnabled();
+  } catch (error) {
+    console.error('Failed to read hotkey state:', error);
+    return false;
+  }
+}
+
 function refreshTrayMenu() {
   if (!showWindowRef) {
     return false;
@@ -48,7 +67,11 @@ function refreshTrayMenu() {
   const checked = isAutostartEnabled();
   lastAutostartChecked = checked;
   return refreshTrayContextMenu(tray, () =>
-    buildTrayMenu({ showWindow: showWindowRef, checked }),
+    buildTrayMenu({
+      showWindow: showWindowRef,
+      checked,
+      hotkeyChecked: readHotkeyEnabledSafe(),
+    }),
   );
 }
 
@@ -90,7 +113,25 @@ function startAutostartMenuSync() {
   }
 }
 
-function buildTrayMenu({ showWindow, checked = isAutostartEnabled() }) {
+function confirmEnableHotkey() {
+  const result = dialog.showMessageBoxSync({
+    type: 'question',
+    buttons: ['Enable', 'Not now'],
+    defaultId: 0,
+    cancelId: 1,
+    title: 'GeminiHarness',
+    message: 'Enable Super+G as a global shortcut?',
+    detail:
+      'Super+G will show or hide GeminiHarness. Existing GNOME shortcuts are left alone; this is only written after you confirm.',
+  });
+  return result === 0;
+}
+
+function buildTrayMenu({
+  showWindow,
+  checked = isAutostartEnabled(),
+  hotkeyChecked = readHotkeyEnabledSafe(),
+}) {
   return Menu.buildFromTemplate([
     {
       label: 'Open Window',
@@ -113,6 +154,31 @@ function buildTrayMenu({ showWindow, checked = isAutostartEnabled() }) {
           );
         }
         watchAutostartDir();
+        refreshTrayMenu();
+      },
+    },
+    {
+      label: 'Keyboard shortcut (Super+G)',
+      type: 'checkbox',
+      checked: hotkeyChecked,
+      click: (item) => {
+        try {
+          if (item.checked) {
+            if (!confirmEnableHotkey()) {
+              refreshTrayMenu();
+              return;
+            }
+            setHotkeyEnabled(true, resolveHotkeyCommand);
+          } else {
+            setHotkeyEnabled(false, resolveHotkeyCommand);
+          }
+        } catch (error) {
+          console.error('Failed to update hotkey:', error);
+          dialog.showErrorBox(
+            'GeminiHarness',
+            `Could not update the keyboard shortcut.\n\n${error.message || error}`,
+          );
+        }
         refreshTrayMenu();
       },
     },

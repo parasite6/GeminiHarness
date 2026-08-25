@@ -9,7 +9,7 @@ function shouldOpenWindowOnReady({ hidden }) {
 }
 
 /**
- * @returns {'ignore' | 'queue' | 'show'}
+ * @returns {'ignore' | 'queue' | 'toggle'}
  */
 function classifySecondInstance({
   isReady,
@@ -34,12 +34,12 @@ function classifySecondInstance({
   ) {
     return 'ignore';
   }
-  return 'show';
+  return 'toggle';
 }
 
 /** @deprecated use classifySecondInstance */
 function shouldShowWindowOnSecondInstance(args) {
-  return classifySecondInstance(args) === 'show';
+  return classifySecondInstance(args) === 'toggle';
 }
 
 function shouldQuitHiddenWithoutTray({ hidden, tray }) {

@@ -72,10 +72,14 @@ function buildExecLine({
   appPath,
   isPackaged,
   extraArgs = DEFAULT_EXTRA_ARGS,
+  includeHidden = true,
 }) {
   const parts = isPackaged
-    ? [execPath, ...extraArgs, HIDDEN_FLAG]
-    : [execPath, appPath, ...extraArgs, HIDDEN_FLAG];
+    ? [execPath, ...extraArgs]
+    : [execPath, appPath, ...extraArgs];
+  if (includeHidden) {
+    parts.push(HIDDEN_FLAG);
+  }
   return parts.map(quoteExecArg).join(' ');
 }
 
@@ -126,8 +130,15 @@ function resolveCurrentExecLine({
   execPath = process.execPath,
   appPath,
   extraArgs = DEFAULT_EXTRA_ARGS,
+  includeHidden = true,
 }) {
-  return buildExecLine({ execPath, appPath, isPackaged, extraArgs });
+  return buildExecLine({
+    execPath,
+    appPath,
+    isPackaged,
+    extraArgs,
+    includeHidden,
+  });
 }
 
 function setAutostartEnabled(enabled, resolveExec, options = {}) {
