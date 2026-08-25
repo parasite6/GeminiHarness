@@ -4,6 +4,7 @@ const AUTH_HOSTS = new Set([
   // Post-auth SID sync after 2FA (CheckCookie → SetSID); not a Sources link.
   'accounts.youtube.com',
 ]);
+const { isHarnessOfflinePage } = require('./offline-gate');
 
 function parseHttpUrl(url) {
   try {
@@ -60,7 +61,7 @@ function handleTopLevelNavigation(event, url, openExternal) {
   }
 
   const targetUrl = targetUrlFromNavEvent(event, url);
-  if (shouldStayInApp(targetUrl)) {
+  if (shouldStayInApp(targetUrl) || isHarnessOfflinePage(targetUrl)) {
     return;
   }
 

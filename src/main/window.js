@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, screen } = require('electron');
+const { app, BrowserWindow, session, screen, net } = require('electron');
 const {
   load,
   save,
@@ -10,9 +10,16 @@ const {
   ZOOM_STEP,
 } = require('./window-state');
 const { buildTitleBarInsetCss } = require('./titlebar-inset');
+const {
+  START_URL,
+  OFFLINE_RETRY_MS,
+  shouldOfferOfflineGate,
+  shouldClearOfflineGate,
+  offlinePagePath,
+  canReachGemini,
+} = require('./offline-gate');
 
 const PARTITION = 'persist:gemini';
-const START_URL = 'https://gemini.google.com';
 const SAVE_DEBOUNCE_MS = 400;
 const TITLE_BAR_OVERLAY_HEIGHT = 36;
 const TITLE_BAR_OVERLAY_COLOR = '#131314';
@@ -24,6 +31,8 @@ let appIsQuitting = false;
 let titleBarInsetCssKey = null;
 let titleBarInsetChain = Promise.resolve();
 let windowEverShown = false;
+let offlineGateActive = false;
+let offlineRetryTimer = null;
 
 async function applyTitleBarInsetOnce(contents) {
   if (!contents || contents.isDestroyed()) {
@@ -189,6 +198,107 @@ function attachStatePersistence(win) {
   attachZoomShortcuts(win);
 }
 
+function stopOfflineRetry() {
+  if (offlineRetryTimer) {
+    clearInterval(offlineRetryTimer);
+    offlineRetryTimer = null;
+  }
+}
+
+function probeGemini() {
+  return canReachGemini({
+    fetchImpl: (...args) => net.fetch(...args),
+    isOnline: () => net.isOnline(),
+  });
+}
+
+async function showOfflinePage(win) {
+  if (!win || win.isDestroyed()) {
+    return;
+  }
+  offlineGateActive = true;
+  try {
+    await win.loadFile(offlinePagePath());
+  } catch (error) {
+    console.error('Failed to load offline page:', error);
+  }
+}
+
+function startOfflineRetry(win) {
+  stopOfflineRetry();
+  offlineRetryTimer = setInterval(() => {
+    attemptGeminiLoad(win, { fromRetry: true });
+  }, OFFLINE_RETRY_MS);
+  if (typeof offlineRetryTimer.unref === 'function') {
+    offlineRetryTimer.unref();
+  }
+}
+
+async function attemptGeminiLoad(win, { fromRetry = false } = {}) {
+  if (!win || win.isDestroyed()) {
+    return;
+  }
+  if (fromRetry && !shouldOfferOfflineGate({ gateActive: offlineGateActive })) {
+    return;
+  }
+
+  if (!(await probeGemini())) {
+    const currentUrl = win.webContents.getURL();
+    if (!currentUrl.startsWith('file:')) {
+      await showOfflinePage(win);
+    } else {
+      offlineGateActive = true;
+    }
+    startOfflineRetry(win);
+    return;
+  }
+
+  // Keep the gate active until Gemini actually finishes loading so a
+  // failed first navigation still gets the custom offline page.
+  stopOfflineRetry();
+  win.loadURL(START_URL);
+}
+
+function attachOfflineGate(win) {
+  offlineGateActive = true;
+
+  win.webContents.on('did-finish-load', () => {
+    const url = win.webContents.getURL();
+    if (
+      shouldClearOfflineGate({
+        gateActive: offlineGateActive,
+        isMainFrame: true,
+        url,
+      })
+    ) {
+      offlineGateActive = false;
+      stopOfflineRetry();
+      return;
+    }
+    // "Try again" reloads our offline page; re-check connectivity then.
+    if (offlineGateActive && url.startsWith('file:')) {
+      attemptGeminiLoad(win, { fromRetry: true });
+    }
+  });
+
+  win.webContents.on(
+    'did-fail-load',
+    (_event, _code, _desc, validatedURL, isMainFrame) => {
+      if (
+        !isMainFrame ||
+        !shouldOfferOfflineGate({ gateActive: offlineGateActive })
+      ) {
+        return;
+      }
+      // Ignore failures for the offline file itself.
+      if (typeof validatedURL === 'string' && validatedURL.startsWith('file:')) {
+        return;
+      }
+      showOfflinePage(win).then(() => startOfflineRetry(win));
+    },
+  );
+}
+
 function createWindow() {
   if (mainWindow && !mainWindow.isDestroyed()) {
     return showMainWindow();
@@ -237,6 +347,7 @@ function createWindow() {
   });
 
   attachStatePersistence(win);
+  attachOfflineGate(win);
 
   win.once('ready-to-show', () => {
     // setZoomFactor before the blink widget exists logs
@@ -253,12 +364,13 @@ function createWindow() {
   });
 
   win.on('closed', () => {
+    stopOfflineRetry();
     if (mainWindow === win) {
       mainWindow = null;
     }
   });
 
-  win.loadURL(START_URL);
+  attemptGeminiLoad(win);
   mainWindow = win;
   return win;
 }

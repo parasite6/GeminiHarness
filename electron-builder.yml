@@ -3,6 +3,7 @@ productName: GeminiHarness
 files:
   - src/main/**/*
   - assets/tray/**/*
+  - assets/offline/**/*
 asarUnpack:
   - assets/tray/**/*
 linux:
