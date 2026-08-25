@@ -3,15 +3,34 @@
 ## Scope
 
 This app is a desktop wrapper around your own logged-in gemini.google.com
-session — an Electron shell, a tray icon, and window/hotkey plumbing. It does
-not proxy, intercept, or modify network traffic to Google, does not execute
-anything on Gemini's behalf, and stores no credentials of its own (auth is
-handled entirely by Google's normal sign-in flow inside the embedded
-session).
+session — an Electron shell, a tray icon, and window plumbing. It does not
+proxy, intercept, or modify network traffic to Google, does not spoof the
+user agent, does not inject scripts or CSS into the page, and does not
+execute anything on Gemini's behalf. It stores no credentials of its own;
+auth is Google's normal sign-in flow inside the embedded Chromium session
+(`persist:gemini`).
 
-Given that scope, the realistic attack surface is local: the Electron shell
-itself, how it handles window/session data on disk, and how it processes
-things dropped into it (files, dragged content).
+Top-level navigations and `window.open` / `target=_blank` are filtered:
+
+- Stay in-app: `gemini.google.com`, `accounts.google.com`, and
+  `accounts.youtube.com` (literal hostnames only — not a `*.google.com`
+  wildcard).
+- Everything else (including Gemini “Sources” links such as
+  `www.google.com/search?...`) is opened with the system browser via
+  `shell.openExternal`, and only for `http:` / `https:` URLs.
+
+Given that scope, the realistic attack surface is local: the Electron shell,
+on-disk session and window state under the app userData directory, tray /
+single-instance behavior, and (when implemented) how dropped files are
+handled.
+
+## Data on disk
+
+Under the app userData path (typically `~/.config/GeminiHarness` on Linux):
+
+- Chromium partition data for `persist:gemini` (cookies, local storage, etc.
+  for the embedded Google session)
+- `window-state.json` (geometry, maximize, zoom — not credentials)
 
 ## Supported Versions
 
@@ -44,6 +63,8 @@ Please include:
   Google, not here.
 - Issues that require an already-compromised machine or user account.
 - Social engineering, phishing, or anything not specific to this app's code.
+- Upstream Electron / Chromium bugs except as they affect this wrapper's
+  behavior (e.g. tray or packaging workarounds we document).
 
 ## Disclosure
 
