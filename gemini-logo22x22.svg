@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="22px" height="22px" viewBox="0 0 22 22" version="1.1">
+<defs>
+<filter id="alpha" filterUnits="objectBoundingBox" x="0%" y="0%" width="100%" height="100%">
+  <feColorMatrix type="matrix" in="SourceGraphic" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0"/>
+</filter>
+<image id="image7" width="22" height="22" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAABmJLR0QA/wD/AP+gvaeTAAACk0lEQVQ4jWNgGGigXGXIOu/DZxZi1TMRq9CN4YfQCdZTQlQ3eIHABEkbha+SxKonGqzikIzO4syMJFY9US4WcbkoOSvHQWHXha0KgtxmRLmaoMGLRXyYNs6c5jPxVy4z+2c+ppPz9rm4a0xhpNjgw9V6voqM6+Wl3fuYrosxMuVPWCuXlLnIk2yDcz8uYereIxxwlaHI6pTWPyblRfosom69zFsYLZkuS5w3eCop6LHvaTxO/VgljnQ8k1939WPBnXAOu5PMAcwHWL2ZVzIZM0nO0GS2T/BkXsxkxbzlX6jRHu81MQWt5hI4DU6fsY6N5UyyPMdbOzu5DXOLVzJ2lkusMVP6Ys7IPJ9RiWkhiwbTMf7fTMv+uzDJz9VhdknzY9rC4sMUkntDel/8n/hcY/WIIoPj+rkf9cSkfGezwA1W3HWe4Wllwn9dtiWM4Yb5jFscGJhMF1xgksrQYd7z/y/TXNYApmP/vJgfqP1hXsXkziS1QJ/ZJsOFee4fY+bq3g+MM1auZ4zPvfF/cls6I6fuNEYGBgYGrLEb28iscHPRq/DKCl359i/T/2a0q/z1DKj8e+1q5l8B9Xt/0wPy/zFdMfiTdlLw4Z+pk7ZnyGg+JyqMF9f/fXBganr3pwLlA2VTXzLNZIxg2mfKwJS6+g7zQSYN5pMCTEya+6efYz/KvgCboThdjAxko1MiDTO+2mjf4P+b2aT+18e79u+WrSmH5R5P2IhPH8F0HDDNYaVFXMBDqfWqzLNYwpgc355/pJfxbxMhfUQBSXtFuVVr+KYVTs2f7Lm5To4qhsKA3KZlRY3zdfKpaigDAwPDHXkLuz4xQRti1RNdHq+P3fTgxD+uh1Q3+I7MkRefkupeEqueZgAAo8/eqaA2SM0AAAAASUVORK5CYII="/>
+<mask id="mask0">
+  <g filter="url(#alpha)">
+<use xlink:href="#image7"/>
+  </g>
+</mask>
+<linearGradient id="linear0" gradientUnits="userSpaceOnUse" x1="47.987999" y1="82.519997" x2="96.367996" y2="32.456001" gradientTransform="matrix(0.171875,0,0,0.171875,0,0)">
+<stop offset="0" style="stop-color:rgb(12.941176%,48.235294%,99.607843%);stop-opacity:1;"/>
+<stop offset="0.14" style="stop-color:rgb(7.843137%,52.156863%,98.823529%);stop-opacity:1;"/>
+<stop offset="0.27" style="stop-color:rgb(2.745098%,55.686275%,98.431373%);stop-opacity:1;"/>
+<stop offset="0.52" style="stop-color:rgb(32.941176%,56.078431%,99.215686%);stop-opacity:1;"/>
+<stop offset="0.78" style="stop-color:rgb(63.137255%,56.470588%,100%);stop-opacity:1;"/>
+<stop offset="0.89" style="stop-color:rgb(68.627451%,58.039216%,99.607843%);stop-opacity:1;"/>
+<stop offset="1" style="stop-color:rgb(74.117647%,60%,99.607843%);stop-opacity:1;"/>
+</linearGradient>
+<clipPath id="clip1">
+  <rect x="0" y="0" width="22" height="22"/>
+</clipPath>
+<g id="surface6" clip-path="url(#clip1)">
+<path style=" stroke:none;fill-rule:nonzero;fill:url(#linear0);" d="M 11 0 C 17.070312 0 22 4.929688 22 11 C 22 17.070312 17.070312 22 11 22 C 4.929688 22 0 17.070312 0 11 C 0 4.929688 4.929688 0 11 0 Z M 11 0 "/>
+</g>
+</defs>
+<g id="surface1">
+<use xlink:href="#surface6" mask="url(#mask0)"/>
+</g>
+</svg>

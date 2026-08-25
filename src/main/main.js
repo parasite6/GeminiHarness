@@ -1,11 +1,25 @@
 const { app } = require('electron');
-const { createWindow, getMainWindow } = require('./window');
+const {
+  createWindow,
+  getMainWindow,
+  showMainWindow,
+  flushWindowState,
+  setAppQuitting,
+} = require('./window');
 const { attachNavigationHandlers } = require('./navigation');
+const { createTray, getTray } = require('./tray');
 
 app.setName('GeminiHarness');
 
-// Future: app.requestSingleInstanceLock() before whenReady, and focus the
-// existing window on second-instance. Not implemented in this step.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+  return;
+}
+
+app.on('second-instance', () => {
+  showMainWindow();
+});
 
 app.on('web-contents-created', (_event, contents) => {
   attachNavigationHandlers(contents);
@@ -13,12 +27,22 @@ app.on('web-contents-created', (_event, contents) => {
 
 app.whenReady().then(() => {
   createWindow();
-  // Future: tray icon / AppIndicator, globalShortcut.
+  createTray({ showWindow: showMainWindow });
+  // Future: globalShortcut.
+});
+
+app.on('before-quit', () => {
+  setAppQuitting(true);
+  flushWindowState();
 });
 
 app.on('window-all-closed', () => {
-  // Future: hide-to-tray instead of quitting on Linux.
-  if (process.platform !== 'darwin') {
+  if (process.platform === 'darwin') {
+    return;
+  }
+  // Keep running in the tray. If the tray never came up, quit so the
+  // process cannot linger with no window and no indicator.
+  if (!getTray()) {
     app.quit();
   }
 });
@@ -26,5 +50,7 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (!getMainWindow()) {
     createWindow();
+  } else {
+    showMainWindow();
   }
 });

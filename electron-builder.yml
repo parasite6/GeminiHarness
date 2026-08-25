@@ -2,6 +2,7 @@ appId: app.geminiharness
 productName: GeminiHarness
 files:
   - src/main/**/*
+  - assets/tray/**/*
 linux:
   target:
     - rpm
