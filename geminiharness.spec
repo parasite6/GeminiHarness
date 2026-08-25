@@ -39,6 +39,7 @@ BuildRequires:  nodejs22
 BuildRequires:  nodejs22-npm
 BuildRequires:  rpm-build
 BuildRequires:  cpio
+BuildRequires:  libxcrypt-compat
 
 ExclusiveArch:  x86_64
 
