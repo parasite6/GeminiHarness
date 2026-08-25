@@ -16,7 +16,18 @@ npm start
 npm test
 ```
 
-`npm start` launches under XWayland (`--ozone-platform=x11`). Packaging targets an RPM via electron-builder (`npm run dist`).
+`npm start` launches under XWayland (`--ozone-platform=x11`).
+
+To build a local test RPM on Fedora:
+
+```bash
+sudo dnf install rpm-build
+npm run dist
+```
+
+The package is written to `dist/geminiharness-*.x86_64.rpm`. Install it with
+`sudo dnf install ./dist/geminiharness-*.x86_64.rpm` (or remove/replace an
+older test install the same way).
 
 ## Behavior
 

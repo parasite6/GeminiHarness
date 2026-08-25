@@ -23,8 +23,9 @@ Top-level navigations and `window.open` / `target=_blank` are filtered:
 
 Given that scope, the realistic attack surface is local: the Electron shell,
 on-disk session and window state under the app userData directory, the
-optional XDG autostart `.desktop` entry, tray / single-instance behavior,
-and (when implemented) how dropped files are handled.
+optional XDG autostart `.desktop` entry, the optional GNOME custom keyboard
+shortcut (user dconf / gsettings), tray / single-instance behavior, and
+(when implemented) how dropped files are handled.
 
 ## Data on disk
 
@@ -39,6 +40,15 @@ Outside userData, if **Start on Login** is enabled:
 - `~/.config/autostart/GeminiHarness.desktop` (Exec points at this app
   with `--hidden`; not credentials). Disabling via the tray deletes the
   file; GNOME Startup Applications may instead set `Hidden=true`.
+
+If **Keyboard shortcut (Super+G)** is enabled from the tray (confirm dialog
+first; never written silently):
+
+- A named relocatable keybinding under
+  `org.gnome.settings-daemon.plugins.media-keys.custom-keybinding`
+  (`…/custom-keybindings/geminiharness/`), listed in the parent
+  `custom-keybindings` array. It stores the launch command and binding
+  only — not credentials. Disabling removes that path from the array.
 
 ## Supported Versions
 
