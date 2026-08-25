@@ -2,6 +2,11 @@ const { Menu, Tray, screen, app } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { resolveAppRoot } = require('./asset-path');
+const {
+  isAutostartEnabled,
+  setAutostartEnabled,
+  resolveCurrentExecLine,
+} = require('./autostart');
 
 let tray = null;
 
@@ -14,6 +19,58 @@ function resolveTrayIconPath() {
     return preferredPath;
   }
   return path.resolve(iconDir, 'icon.png');
+}
+
+function resolveAutostartExec() {
+  return resolveCurrentExecLine({
+    isPackaged: app.isPackaged,
+    execPath: process.execPath,
+    appPath: app.getAppPath(),
+  });
+}
+
+function buildTrayMenu({ showWindow }) {
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'Open Window',
+      click: () => {
+        showWindow();
+      },
+    },
+    {
+      label: 'Start on Login',
+      type: 'checkbox',
+      // Re-read on each build; menu-will-show also refreshes below so the
+      // checkmark tracks the on-disk .desktop file, not a stale cache.
+      checked: isAutostartEnabled(),
+      click: (item) => {
+        try {
+          setAutostartEnabled(item.checked, resolveAutostartExec);
+        } catch (error) {
+          console.error('Failed to update autostart:', error);
+        }
+        if (tray && !tray.isDestroyed()) {
+          tray.setContextMenu(buildTrayMenu({ showWindow }));
+        }
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit Gemini',
+      click: () => {
+        app.quit();
+      },
+    },
+  ]);
+
+  menu.on('menu-will-show', () => {
+    const item = menu.items.find((entry) => entry.label === 'Start on Login');
+    if (item) {
+      item.checked = isAutostartEnabled();
+    }
+  });
+
+  return menu;
 }
 
 function createTray({ showWindow }) {
@@ -38,23 +95,7 @@ function createTray({ showWindow }) {
   }
 
   tray.setToolTip('GeminiHarness');
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      {
-        label: 'Open Window',
-        click: () => {
-          showWindow();
-        },
-      },
-      { type: 'separator' },
-      {
-        label: 'Quit Gemini',
-        click: () => {
-          app.quit();
-        },
-      },
-    ]),
-  );
+  tray.setContextMenu(buildTrayMenu({ showWindow }));
 
   return tray;
 }
@@ -67,4 +108,5 @@ module.exports = {
   createTray,
   getTray,
   resolveTrayIconPath,
+  buildTrayMenu,
 };

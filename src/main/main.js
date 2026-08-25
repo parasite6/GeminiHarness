@@ -8,6 +8,7 @@ const {
 } = require('./window');
 const { attachNavigationHandlers } = require('./navigation');
 const { createTray, getTray } = require('./tray');
+const { wantsHiddenLaunch } = require('./autostart');
 
 // Force X11/XWayland so BrowserWindow x/y can be set and restored.
 // Native Wayland (xdg-shell) forbids client-side window placement; Electron
@@ -40,12 +41,17 @@ app.on('web-contents-created', (_event, contents) => {
 });
 
 app.whenReady().then(() => {
+  // Autostart launches with --hidden: tray only, no window until the user
+  // opens one via the menu (or a future hotkey).
+  createTray({ showWindow: showMainWindow });
+  if (wantsHiddenLaunch()) {
+    return;
+  }
   if (!getMainWindow()) {
     createWindow();
   } else {
     showMainWindow();
   }
-  createTray({ showWindow: showMainWindow });
   // Future: globalShortcut.
 });
 
