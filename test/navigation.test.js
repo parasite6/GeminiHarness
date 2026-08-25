@@ -50,8 +50,9 @@ describe('isGeminiHost', () => {
 });
 
 describe('isGoogleAuthHost', () => {
-  it('matches accounts.google.com exactly', () => {
+  it('matches accounts.google.com and accounts.youtube.com exactly', () => {
     assert.equal(isGoogleAuthHost('accounts.google.com'), true);
+    assert.equal(isGoogleAuthHost('accounts.youtube.com'), true);
   });
 
   it('does not treat other Google properties as auth hosts', () => {
@@ -62,6 +63,8 @@ describe('isGoogleAuthHost', () => {
     assert.equal(isGoogleAuthHost('maps.google.com'), false);
     assert.equal(isGoogleAuthHost('consent.google.com'), false);
     assert.equal(isGoogleAuthHost('myaccount.google.com'), false);
+    assert.equal(isGoogleAuthHost('youtube.com'), false);
+    assert.equal(isGoogleAuthHost('www.youtube.com'), false);
   });
 });
 
@@ -77,6 +80,15 @@ describe('shouldStayInApp', () => {
   it('keeps accounts.google.com in-app', () => {
     assert.equal(
       shouldStayInApp('https://accounts.google.com/ServiceLogin'),
+      true,
+    );
+  });
+
+  it('keeps accounts.youtube.com SetSID in-app', () => {
+    assert.equal(
+      shouldStayInApp(
+        'https://accounts.youtube.com/accounts/SetSID?ssdc=1&continue=https://gemini.google.com/app',
+      ),
       true,
     );
   });

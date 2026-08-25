@@ -1,5 +1,9 @@
 const GEMINI_HOST = 'gemini.google.com';
-const AUTH_HOSTS = new Set(['accounts.google.com']);
+const AUTH_HOSTS = new Set([
+  'accounts.google.com',
+  // Post-auth SID sync after 2FA (CheckCookie → SetSID); not a Sources link.
+  'accounts.youtube.com',
+]);
 
 function parseHttpUrl(url) {
   try {
