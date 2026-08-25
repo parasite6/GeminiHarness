@@ -3,7 +3,11 @@ productName: GeminiHarness
 files:
   - src/main/**/*
   - assets/tray/**/*
+asarUnpack:
+  - assets/tray/**/*
 linux:
   target:
     - rpm
   category: Network
+  executableArgs:
+    - --ozone-platform=x11

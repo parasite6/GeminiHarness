@@ -1,19 +1,19 @@
 const { Menu, Tray, screen, app } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
-
-const ICON_DIR = path.join(__dirname, '..', '..', 'assets', 'tray');
+const { resolveAppRoot } = require('./asset-path');
 
 let tray = null;
 
 function resolveTrayIconPath() {
+  const iconDir = path.join(resolveAppRoot(), 'assets', 'tray');
   const scale = screen.getPrimaryDisplay().scaleFactor;
   const preferred = scale >= 1.5 ? 'icon@2x.png' : 'icon.png';
-  const preferredPath = path.resolve(ICON_DIR, preferred);
+  const preferredPath = path.resolve(iconDir, preferred);
   if (fs.existsSync(preferredPath)) {
     return preferredPath;
   }
-  return path.resolve(ICON_DIR, 'icon.png');
+  return path.resolve(iconDir, 'icon.png');
 }
 
 function createTray({ showWindow }) {
@@ -66,4 +66,5 @@ function getTray() {
 module.exports = {
   createTray,
   getTray,
+  resolveTrayIconPath,
 };

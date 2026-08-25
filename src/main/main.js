@@ -9,6 +9,15 @@ const {
 const { attachNavigationHandlers } = require('./navigation');
 const { createTray, getTray } = require('./tray');
 
+// Force X11/XWayland so BrowserWindow x/y can be set and restored.
+// Native Wayland (xdg-shell) forbids client-side window placement; Electron
+// 38+ defaults to Wayland in Wayland sessions. ELECTRON_OZONE_PLATFORM_HINT
+// was removed — use --ozone-platform=x11 (also set in package.json start and
+// electron-builder linux.executableArgs so it applies before Chromium boots).
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('ozone-platform', 'x11');
+}
+
 app.setName('GeminiHarness');
 
 const gotLock = app.requestSingleInstanceLock();
@@ -18,6 +27,11 @@ if (!gotLock) {
 }
 
 app.on('second-instance', () => {
+  // If the second launch arrives before whenReady, do not create a window
+  // here — whenReady owns first creation. After ready, focus/show only.
+  if (!app.isReady()) {
+    return;
+  }
   showMainWindow();
 });
 
@@ -26,7 +40,11 @@ app.on('web-contents-created', (_event, contents) => {
 });
 
 app.whenReady().then(() => {
-  createWindow();
+  if (!getMainWindow()) {
+    createWindow();
+  } else {
+    showMainWindow();
+  }
   createTray({ showWindow: showMainWindow });
   // Future: globalShortcut.
 });
@@ -48,9 +66,5 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (!getMainWindow()) {
-    createWindow();
-  } else {
-    showMainWindow();
-  }
+  showMainWindow();
 });

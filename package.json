@@ -7,7 +7,7 @@
   "author": "parasite6",
   "license": "MIT",
   "scripts": {
-    "start": "electron .",
+    "start": "electron . --ozone-platform=x11",
     "test": "node --test",
     "dist": "electron-builder --linux rpm"
   },

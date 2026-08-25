@@ -147,6 +147,10 @@ function attachStatePersistence(win) {
 }
 
 function createWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    return showMainWindow();
+  }
+
   persistedPath = stateFilePath(app.getPath('userData'));
   const state = load(persistedPath, currentDisplays());
   const geminiSession = session.fromPartition(PARTITION);
