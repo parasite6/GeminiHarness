@@ -32,7 +32,3 @@ Without `gnome-shell-extension-appindicator`, the tray icon may not appear. Elec
 ## XWayland note
 
 The app always uses XWayland so window position can be restored. Native Wayland’s xdg-shell does not allow clients to set their own position; size, maximize, and zoom would still work either way.
-
-## Security
-
-See [SECURITY.md](SECURITY.md).
