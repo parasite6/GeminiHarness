@@ -429,3 +429,8 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Electron
+dist/
+release/
+out/

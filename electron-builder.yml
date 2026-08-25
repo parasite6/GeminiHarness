@@ -1,0 +1,8 @@
+appId: app.geminiharness
+productName: GeminiHarness
+files:
+  - src/main/**/*
+linux:
+  target:
+    - rpm
+  category: Network
