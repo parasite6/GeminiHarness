@@ -71,7 +71,6 @@ app.whenReady().then(() => {
   } else {
     showMainWindow();
   }
-  // Future: globalShortcut.
 });
 
 app.on('before-quit', () => {

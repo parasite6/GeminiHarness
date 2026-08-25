@@ -47,10 +47,6 @@ function setAppQuitting(value) {
   appIsQuitting = Boolean(value);
 }
 
-function isAppQuitting() {
-  return appIsQuitting;
-}
-
 function currentDisplays() {
   const primaryId = screen.getPrimaryDisplay().id;
   return screen.getAllDisplays().map((display) => ({
@@ -269,8 +265,4 @@ module.exports = {
   showMainWindow,
   flushWindowState,
   setAppQuitting,
-  isAppQuitting,
-  PARTITION,
-  START_URL,
-  SAVE_DEBOUNCE_MS,
 };

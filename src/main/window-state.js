@@ -177,9 +177,6 @@ function save(filePath, state, fsModule = fs) {
 }
 
 module.exports = {
-  STATE_FILENAME,
-  DEFAULT_WIDTH,
-  DEFAULT_HEIGHT,
   MIN_WIDTH,
   MIN_HEIGHT,
   MIN_ZOOM,
@@ -188,7 +185,6 @@ module.exports = {
   defaultState,
   stateFilePath,
   sanitizeState,
-  isReachable,
   clampBoundsToDisplays,
   load,
   save,

@@ -135,6 +135,4 @@ function getTray() {
 module.exports = {
   createTray,
   getTray,
-  resolveTrayIconPath,
-  buildTrayMenu,
 };

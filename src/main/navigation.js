@@ -97,6 +97,4 @@ module.exports = {
   canOpenExternally,
   openExternalSafe,
   attachNavigationHandlers,
-  GEMINI_HOST,
-  AUTH_HOSTS,
 };

@@ -145,12 +145,10 @@ function shouldWatchAutostartFilename(filename) {
 module.exports = {
   DESKTOP_FILENAME,
   HIDDEN_FLAG,
-  DEFAULT_EXTRA_ARGS,
   autostartDir,
   autostartDesktopPath,
   parseAutostartDesktopEnabled,
   isAutostartEnabled,
-  quoteExecArg,
   buildExecLine,
   buildDesktopEntry,
   enableAutostart,
