@@ -7,6 +7,7 @@ const {
   shouldStayInApp,
   canOpenExternally,
   openExternalSafe,
+  handleTopLevelNavigation,
 } = require('../src/main/navigation');
 
 describe('parseHttpUrl', () => {
@@ -136,5 +137,35 @@ describe('canOpenExternally / openExternalSafe', () => {
     assert.equal(openExternalSafe('file:///tmp/x', opener), false);
     assert.equal(openExternalSafe('javascript:alert(1)', opener), false);
     assert.deepEqual(opened, ['https://github.com/']);
+  });
+});
+
+describe('handleTopLevelNavigation', () => {
+  it('allows the harness offline page and blocks other file URLs', () => {
+    const { pathToFileURL } = require('node:url');
+    const path = require('node:path');
+    const appRoot = path.join(__dirname, '..');
+    const offlineUrl = pathToFileURL(
+      path.join(appRoot, 'assets', 'offline', 'offline.html'),
+    ).href;
+
+    const allowed = { preventDefaultCalls: 0, isMainFrame: true };
+    handleTopLevelNavigation(allowed, offlineUrl, () => {});
+    assert.equal(allowed.preventDefaultCalls, 0);
+
+    const blocked = {
+      preventDefaultCalls: 0,
+      isMainFrame: true,
+      preventDefault() {
+        this.preventDefaultCalls += 1;
+      },
+    };
+    const opened = [];
+    handleTopLevelNavigation(blocked, 'file:///tmp/other.html', (url) => {
+      opened.push(url);
+    });
+    // file: is not http(s), so openExternalSafe rejects — still preventDefault
+    assert.equal(blocked.preventDefaultCalls, 1);
+    assert.deepEqual(opened, []);
   });
 });

@@ -65,7 +65,9 @@ function handleTopLevelNavigation(event, url, openExternal) {
     return;
   }
 
-  event.preventDefault();
+  if (typeof event.preventDefault === 'function') {
+    event.preventDefault();
+  }
   openExternalSafe(targetUrl, openExternal);
 }
 
@@ -97,5 +99,6 @@ module.exports = {
   shouldStayInApp,
   canOpenExternally,
   openExternalSafe,
+  handleTopLevelNavigation,
   attachNavigationHandlers,
 };

@@ -15,6 +15,10 @@ const {
   OFFLINE_RETRY_MS,
   shouldOfferOfflineGate,
   shouldClearOfflineGate,
+  shouldShowOfflineOnFail,
+  shouldResumeOfflineRetry,
+  canBeginOfflineAttempt,
+  isHarnessOfflinePage,
   offlinePagePath,
   canReachGemini,
 } = require('./offline-gate');
@@ -33,6 +37,7 @@ let titleBarInsetChain = Promise.resolve();
 let windowEverShown = false;
 let offlineGateActive = false;
 let offlineRetryTimer = null;
+let offlineAttemptInFlight = false;
 
 async function applyTitleBarInsetOnce(contents) {
   if (!contents || contents.isDestroyed()) {
@@ -205,9 +210,11 @@ function stopOfflineRetry() {
   }
 }
 
-function probeGemini() {
+function probeGemini(win) {
+  const ses = win.webContents.session;
   return canReachGemini({
-    fetchImpl: (...args) => net.fetch(...args),
+    // Match the BrowserWindow partition (persist:gemini), not the default session.
+    fetchImpl: (url, init) => ses.fetch(url, init),
     isOnline: () => net.isOnline(),
   });
 }
@@ -234,6 +241,17 @@ function startOfflineRetry(win) {
   }
 }
 
+function resumeOfflineGateIfNeeded(win) {
+  if (!win || win.isDestroyed()) {
+    return;
+  }
+  if (!shouldResumeOfflineRetry({ gateActive: offlineGateActive })) {
+    return;
+  }
+  startOfflineRetry(win);
+  attemptGeminiLoad(win, { fromRetry: true });
+}
+
 async function attemptGeminiLoad(win, { fromRetry = false } = {}) {
   if (!win || win.isDestroyed()) {
     return;
@@ -241,26 +259,44 @@ async function attemptGeminiLoad(win, { fromRetry = false } = {}) {
   if (fromRetry && !shouldOfferOfflineGate({ gateActive: offlineGateActive })) {
     return;
   }
-
-  if (!(await probeGemini())) {
-    const currentUrl = win.webContents.getURL();
-    if (!currentUrl.startsWith('file:')) {
-      await showOfflinePage(win);
-    } else {
-      offlineGateActive = true;
-    }
-    startOfflineRetry(win);
+  if (!canBeginOfflineAttempt(offlineAttemptInFlight)) {
     return;
   }
 
-  // Keep the gate active until Gemini actually finishes loading so a
-  // failed first navigation still gets the custom offline page.
-  stopOfflineRetry();
-  win.loadURL(START_URL);
+  offlineAttemptInFlight = true;
+  try {
+    if (!(await probeGemini(win))) {
+      const currentUrl = win.webContents.getURL();
+      if (!isHarnessOfflinePage(currentUrl)) {
+        await showOfflinePage(win);
+      } else {
+        offlineGateActive = true;
+      }
+      if (win.isVisible()) {
+        startOfflineRetry(win);
+      }
+      return;
+    }
+
+    // Keep the gate active until Gemini (or auth) actually finishes loading
+    // so a failed first navigation still gets the custom offline page.
+    stopOfflineRetry();
+    win.loadURL(START_URL);
+  } finally {
+    offlineAttemptInFlight = false;
+  }
 }
 
 function attachOfflineGate(win) {
   offlineGateActive = true;
+
+  win.on('hide', () => {
+    stopOfflineRetry();
+  });
+
+  win.on('show', () => {
+    resumeOfflineGateIfNeeded(win);
+  });
 
   win.webContents.on('did-finish-load', () => {
     const url = win.webContents.getURL();
@@ -276,25 +312,29 @@ function attachOfflineGate(win) {
       return;
     }
     // "Try again" reloads our offline page; re-check connectivity then.
-    if (offlineGateActive && url.startsWith('file:')) {
+    if (offlineGateActive && isHarnessOfflinePage(url)) {
       attemptGeminiLoad(win, { fromRetry: true });
     }
   });
 
   win.webContents.on(
     'did-fail-load',
-    (_event, _code, _desc, validatedURL, isMainFrame) => {
+    (_event, errorCode, _desc, validatedURL, isMainFrame) => {
       if (
-        !isMainFrame ||
-        !shouldOfferOfflineGate({ gateActive: offlineGateActive })
+        !shouldShowOfflineOnFail({
+          gateActive: offlineGateActive,
+          isMainFrame,
+          errorCode,
+          validatedURL,
+        })
       ) {
         return;
       }
-      // Ignore failures for the offline file itself.
-      if (typeof validatedURL === 'string' && validatedURL.startsWith('file:')) {
-        return;
-      }
-      showOfflinePage(win).then(() => startOfflineRetry(win));
+      showOfflinePage(win).then(() => {
+        if (win.isVisible()) {
+          startOfflineRetry(win);
+        }
+      });
     },
   );
 }
@@ -390,6 +430,7 @@ function showMainWindow() {
   markWindowEverShown();
   win.show();
   win.focus();
+  resumeOfflineGateIfNeeded(win);
   return win;
 }
 

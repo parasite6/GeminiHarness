@@ -1,13 +1,19 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
+const { pathToFileURL } = require('node:url');
 const {
   OFFLINE_RETRY_MS,
+  ERR_ABORTED,
   isGeminiStartUrl,
   shouldOfferOfflineGate,
   shouldClearOfflineGate,
+  shouldShowOfflineOnFail,
+  shouldResumeOfflineRetry,
+  canBeginOfflineAttempt,
   interpretReachabilityResponse,
   offlinePagePath,
+  isHarnessOfflinePage,
   canReachGemini,
 } = require('../src/main/offline-gate');
 
@@ -29,12 +35,28 @@ describe('offline-gate helpers', () => {
     assert.equal(shouldOfferOfflineGate({ gateActive: false }), false);
   });
 
-  it('clears the gate once Gemini has loaded in the main frame', () => {
+  it('clears the gate once Gemini or auth hosts load in the main frame', () => {
     assert.equal(
       shouldClearOfflineGate({
         gateActive: true,
         isMainFrame: true,
         url: 'https://gemini.google.com/app',
+      }),
+      true,
+    );
+    assert.equal(
+      shouldClearOfflineGate({
+        gateActive: true,
+        isMainFrame: true,
+        url: 'https://accounts.google.com/ServiceLogin',
+      }),
+      true,
+    );
+    assert.equal(
+      shouldClearOfflineGate({
+        gateActive: true,
+        isMainFrame: true,
+        url: 'https://accounts.youtube.com/accounts/SetSID',
       }),
       true,
     );
@@ -56,6 +78,65 @@ describe('offline-gate helpers', () => {
     );
   });
 
+  it('ignores ERR_ABORTED and auth-chain failures for the offline page', () => {
+    assert.equal(ERR_ABORTED, -3);
+    assert.equal(
+      shouldShowOfflineOnFail({
+        gateActive: true,
+        isMainFrame: true,
+        errorCode: ERR_ABORTED,
+        validatedURL: 'https://gemini.google.com/',
+      }),
+      false,
+    );
+    assert.equal(
+      shouldShowOfflineOnFail({
+        gateActive: true,
+        isMainFrame: true,
+        errorCode: -105,
+        validatedURL: 'https://accounts.google.com/ServiceLogin',
+      }),
+      false,
+    );
+    assert.equal(
+      shouldShowOfflineOnFail({
+        gateActive: true,
+        isMainFrame: true,
+        errorCode: -105,
+        validatedURL: 'https://gemini.google.com/',
+      }),
+      true,
+    );
+    assert.equal(
+      shouldShowOfflineOnFail({
+        gateActive: true,
+        isMainFrame: true,
+        errorCode: -105,
+        validatedURL: 'file:///opt/GeminiHarness/assets/offline/offline.html',
+      }),
+      false,
+    );
+    assert.equal(
+      shouldShowOfflineOnFail({
+        gateActive: false,
+        isMainFrame: true,
+        errorCode: -105,
+        validatedURL: 'https://gemini.google.com/',
+      }),
+      false,
+    );
+  });
+
+  it('blocks overlapping offline attempts with an in-flight guard', () => {
+    assert.equal(canBeginOfflineAttempt(false), true);
+    assert.equal(canBeginOfflineAttempt(true), false);
+  });
+
+  it('resumes retry only while the gate is still active', () => {
+    assert.equal(shouldResumeOfflineRetry({ gateActive: true }), true);
+    assert.equal(shouldResumeOfflineRetry({ gateActive: false }), false);
+  });
+
   it('treats common success and redirect statuses as reachable', () => {
     assert.equal(interpretReachabilityResponse({ ok: true, status: 200 }), true);
     assert.equal(interpretReachabilityResponse({ ok: false, status: 301 }), true);
@@ -70,6 +151,56 @@ describe('offline-gate helpers', () => {
       page,
       path.join('/opt/GeminiHarness', 'assets', 'offline', 'offline.html'),
     );
+  });
+
+  it('keeps app.asar paths (loadFile works from asar; do not unpack)', () => {
+    const { unpackAsarRoot } = require('../src/main/asset-path');
+    const asarRoot = path.join(
+      '/opt',
+      'GeminiHarness',
+      'resources',
+      'app.asar',
+    );
+    const page = offlinePagePath(asarRoot);
+    assert.equal(
+      page,
+      path.join(asarRoot, 'assets', 'offline', 'offline.html'),
+    );
+    assert.equal(page.includes('app.asar.unpacked'), false);
+    assert.notEqual(
+      page,
+      path.join(
+        unpackAsarRoot(asarRoot),
+        'assets',
+        'offline',
+        'offline.html',
+      ),
+    );
+  });
+
+  it('probes with HEAD and cancels any response body', async () => {
+    let seenMethod;
+    let bodyCancelled = false;
+    assert.equal(
+      await canReachGemini({
+        isOnline: () => true,
+        fetchImpl: async (_url, init) => {
+          seenMethod = init.method;
+          return {
+            ok: true,
+            status: 200,
+            body: {
+              cancel() {
+                bodyCancelled = true;
+              },
+            },
+          };
+        },
+      }),
+      true,
+    );
+    assert.equal(seenMethod, 'HEAD');
+    assert.equal(bodyCancelled, true);
   });
 
   it('canReachGemini respects offline and fetch failures', async () => {
@@ -98,15 +229,20 @@ describe('offline-gate helpers', () => {
     );
   });
 
-  it('recognizes the local offline page file URL', () => {
-    const { isHarnessOfflinePage } = require('../src/main/offline-gate');
+  it('matches only the exact packaged offline page path', () => {
+    const appRoot = '/opt/GeminiHarness';
+    const exact = pathToFileURL(
+      path.join(appRoot, 'assets', 'offline', 'offline.html'),
+    ).href;
+    assert.equal(isHarnessOfflinePage(exact, appRoot), true);
     assert.equal(
       isHarnessOfflinePage(
-        'file:///opt/GeminiHarness/assets/offline/offline.html',
+        'file:///tmp/evil/assets/offline/offline.html',
+        appRoot,
       ),
-      true,
+      false,
     );
-    assert.equal(isHarnessOfflinePage('file:///tmp/other.html'), false);
-    assert.equal(isHarnessOfflinePage('https://gemini.google.com/'), false);
+    assert.equal(isHarnessOfflinePage('file:///tmp/other.html', appRoot), false);
+    assert.equal(isHarnessOfflinePage('https://gemini.google.com/', appRoot), false);
   });
 });
