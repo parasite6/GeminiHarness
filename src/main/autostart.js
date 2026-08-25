@@ -21,8 +21,43 @@ function autostartDesktopPath(options = {}) {
   return path.join(autostartDir(options), DESKTOP_FILENAME);
 }
 
+function parseDesktopBoolean(value) {
+  return String(value).trim().toLowerCase() === 'true';
+}
+
+function parseAutostartDesktopEnabled(contents) {
+  let hidden = false;
+  let gnomeEnabled = true;
+  for (const rawLine of String(contents).split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#') || line.startsWith('[')) {
+      continue;
+    }
+    const eq = line.indexOf('=');
+    if (eq === -1) {
+      continue;
+    }
+    const key = line.slice(0, eq).trim();
+    const value = line.slice(eq + 1);
+    if (key === 'Hidden') {
+      hidden = parseDesktopBoolean(value);
+    } else if (key === 'X-GNOME-Autostart-enabled') {
+      gnomeEnabled = parseDesktopBoolean(value);
+    }
+  }
+  return !hidden && gnomeEnabled;
+}
+
 function isAutostartEnabled(options = {}) {
-  return fs.existsSync(autostartDesktopPath(options));
+  const desktop = autostartDesktopPath(options);
+  if (!fs.existsSync(desktop)) {
+    return false;
+  }
+  try {
+    return parseAutostartDesktopEnabled(fs.readFileSync(desktop, 'utf8'));
+  } catch {
+    return false;
+  }
 }
 
 function quoteExecArg(arg) {
@@ -52,6 +87,7 @@ function buildDesktopEntry({ name, exec }) {
     `Name=${name}`,
     `Exec=${exec}`,
     'Terminal=false',
+    'Hidden=false',
     'X-GNOME-Autostart-enabled=true',
     '',
   ].join('\n');
@@ -94,12 +130,16 @@ function resolveCurrentExecLine({
   return buildExecLine({ execPath, appPath, isPackaged, extraArgs });
 }
 
-function setAutostartEnabled(enabled, resolveExec) {
+function setAutostartEnabled(enabled, resolveExec, options = {}) {
   if (enabled) {
-    enableAutostart({ exec: resolveExec() });
+    enableAutostart({ ...options, exec: resolveExec() });
   } else {
-    disableAutostart();
+    disableAutostart(options);
   }
+}
+
+function shouldWatchAutostartFilename(filename) {
+  return !filename || filename === DESKTOP_FILENAME;
 }
 
 module.exports = {
@@ -108,6 +148,7 @@ module.exports = {
   DEFAULT_EXTRA_ARGS,
   autostartDir,
   autostartDesktopPath,
+  parseAutostartDesktopEnabled,
   isAutostartEnabled,
   quoteExecArg,
   buildExecLine,
@@ -117,4 +158,5 @@ module.exports = {
   wantsHiddenLaunch,
   resolveCurrentExecLine,
   setAutostartEnabled,
+  shouldWatchAutostartFilename,
 };

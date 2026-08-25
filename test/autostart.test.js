@@ -6,13 +6,18 @@ const path = require('node:path');
 const {
   DESKTOP_FILENAME,
   HIDDEN_FLAG,
+  autostartDir,
   autostartDesktopPath,
   isAutostartEnabled,
+  parseAutostartDesktopEnabled,
   buildDesktopEntry,
   buildExecLine,
   enableAutostart,
   disableAutostart,
   wantsHiddenLaunch,
+  resolveCurrentExecLine,
+  setAutostartEnabled,
+  shouldWatchAutostartFilename,
 } = require('../src/main/autostart');
 
 describe('autostart (XDG .desktop)', () => {
@@ -35,8 +40,68 @@ describe('autostart (XDG .desktop)', () => {
     );
   });
 
+  it('falls back to ~/.config/autostart when XDG_CONFIG_HOME is unset', () => {
+    const homedir = () => '/home/tester';
+    assert.equal(
+      autostartDir({ env: {}, homedir }),
+      path.join('/home/tester', '.config', 'autostart'),
+    );
+    assert.equal(
+      autostartDesktopPath({ env: { XDG_CONFIG_HOME: '' }, homedir }),
+      path.join('/home/tester', '.config', 'autostart', DESKTOP_FILENAME),
+    );
+  });
+
   it('reports disabled when the desktop file is missing', () => {
     assert.equal(isAutostartEnabled({ env }), false);
+  });
+
+  it('reports disabled when GNOME sets Hidden=true without deleting the file', () => {
+    const desktop = autostartDesktopPath({ env });
+    fs.mkdirSync(path.dirname(desktop), { recursive: true });
+    fs.writeFileSync(
+      desktop,
+      [
+        '[Desktop Entry]',
+        'Type=Application',
+        'Name=GeminiHarness',
+        'Exec=/opt/GeminiHarness/geminiharness --hidden',
+        'Hidden=true',
+        'X-GNOME-Autostart-enabled=true',
+        '',
+      ].join('\n'),
+    );
+    assert.equal(isAutostartEnabled({ env }), false);
+  });
+
+  it('reports disabled when X-GNOME-Autostart-enabled=false', () => {
+    const desktop = autostartDesktopPath({ env });
+    fs.mkdirSync(path.dirname(desktop), { recursive: true });
+    fs.writeFileSync(
+      desktop,
+      [
+        '[Desktop Entry]',
+        'Type=Application',
+        'Name=GeminiHarness',
+        'Exec=/opt/GeminiHarness/geminiharness --hidden',
+        'X-GNOME-Autostart-enabled=false',
+        '',
+      ].join('\n'),
+    );
+    assert.equal(isAutostartEnabled({ env }), false);
+  });
+
+  it('reports enabled for a normal autostart entry', () => {
+    const text = buildDesktopEntry({
+      name: 'GeminiHarness',
+      exec: '/opt/GeminiHarness/geminiharness --hidden',
+    });
+    assert.equal(parseAutostartDesktopEnabled(text), true);
+    enableAutostart({
+      env,
+      exec: '/opt/GeminiHarness/geminiharness --hidden',
+    });
+    assert.equal(isAutostartEnabled({ env }), true);
   });
 
   it('buildExecLine quotes spaces and always ends with --hidden', () => {
@@ -66,6 +131,25 @@ describe('autostart (XDG .desktop)', () => {
     );
   });
 
+  it('resolveCurrentExecLine matches packaged vs unpackaged Exec lines', () => {
+    assert.equal(
+      resolveCurrentExecLine({
+        isPackaged: true,
+        execPath: '/opt/GeminiHarness/geminiharness',
+        appPath: '/opt/GeminiHarness/resources/app.asar',
+      }),
+      '/opt/GeminiHarness/geminiharness --ozone-platform=x11 --hidden',
+    );
+    assert.equal(
+      resolveCurrentExecLine({
+        isPackaged: false,
+        execPath: '/usr/bin/electron',
+        appPath: '/home/dev/GeminiHarness',
+      }),
+      '/usr/bin/electron /home/dev/GeminiHarness --ozone-platform=x11 --hidden',
+    );
+  });
+
   it('buildDesktopEntry is a standard XDG Application entry', () => {
     const text = buildDesktopEntry({
       name: 'GeminiHarness',
@@ -79,6 +163,7 @@ describe('autostart (XDG .desktop)', () => {
       /\nExec=\/opt\/GeminiHarness\/geminiharness --ozone-platform=x11 --hidden\n/,
     );
     assert.match(text, /\nTerminal=false\n/);
+    assert.match(text, /\nHidden=false\n/);
     assert.match(text, /\nX-GNOME-Autostart-enabled=true\n/);
   });
 
@@ -98,6 +183,15 @@ describe('autostart (XDG .desktop)', () => {
     assert.equal(isAutostartEnabled({ env }), false);
   });
 
+  it('setAutostartEnabled writes and removes the entry', () => {
+    const exec =
+      '/opt/GeminiHarness/geminiharness --ozone-platform=x11 --hidden';
+    setAutostartEnabled(true, () => exec, { env });
+    assert.equal(isAutostartEnabled({ env }), true);
+    setAutostartEnabled(false, () => exec, { env });
+    assert.equal(isAutostartEnabled({ env }), false);
+  });
+
   it('disable is a no-op when the file is already gone', () => {
     assert.doesNotThrow(() => disableAutostart({ env }));
   });
@@ -105,5 +199,15 @@ describe('autostart (XDG .desktop)', () => {
   it('wantsHiddenLaunch follows --hidden on argv', () => {
     assert.equal(wantsHiddenLaunch(['node', 'app', '--hidden']), true);
     assert.equal(wantsHiddenLaunch(['node', 'app']), false);
+    assert.equal(
+      wantsHiddenLaunch(['geminiharness', '--ozone-platform=x11', '--hidden']),
+      true,
+    );
+  });
+
+  it('shouldWatchAutostartFilename ignores unrelated files', () => {
+    assert.equal(shouldWatchAutostartFilename(DESKTOP_FILENAME), true);
+    assert.equal(shouldWatchAutostartFilename(null), true);
+    assert.equal(shouldWatchAutostartFilename('other.desktop'), false);
   });
 });

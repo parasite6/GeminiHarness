@@ -3,12 +3,20 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { resolveAppRoot } = require('./asset-path');
 const {
+  autostartDir,
   isAutostartEnabled,
   setAutostartEnabled,
   resolveCurrentExecLine,
+  shouldWatchAutostartFilename,
 } = require('./autostart');
+const {
+  attachTrayMenuRefresh,
+  refreshTrayContextMenu,
+} = require('./tray-menu');
 
 let tray = null;
+let autostartWatcher = null;
+let showWindowRef = null;
 
 function resolveTrayIconPath() {
   const iconDir = path.join(resolveAppRoot(), 'assets', 'tray');
@@ -29,8 +37,37 @@ function resolveAutostartExec() {
   });
 }
 
+function refreshTrayMenu() {
+  if (!showWindowRef) {
+    return false;
+  }
+  return refreshTrayContextMenu(tray, () =>
+    buildTrayMenu({ showWindow: showWindowRef }),
+  );
+}
+
+function watchAutostartDir() {
+  if (autostartWatcher) {
+    return;
+  }
+  const dir = autostartDir();
+  if (!fs.existsSync(dir)) {
+    return;
+  }
+  try {
+    autostartWatcher = fs.watch(dir, (_event, filename) => {
+      if (!shouldWatchAutostartFilename(filename)) {
+        return;
+      }
+      refreshTrayMenu();
+    });
+  } catch (error) {
+    console.error('Failed to watch autostart directory:', error);
+  }
+}
+
 function buildTrayMenu({ showWindow }) {
-  const menu = Menu.buildFromTemplate([
+  return Menu.buildFromTemplate([
     {
       label: 'Open Window',
       click: () => {
@@ -40,8 +77,6 @@ function buildTrayMenu({ showWindow }) {
     {
       label: 'Start on Login',
       type: 'checkbox',
-      // Re-read on each build; menu-will-show also refreshes below so the
-      // checkmark tracks the on-disk .desktop file, not a stale cache.
       checked: isAutostartEnabled(),
       click: (item) => {
         try {
@@ -49,9 +84,8 @@ function buildTrayMenu({ showWindow }) {
         } catch (error) {
           console.error('Failed to update autostart:', error);
         }
-        if (tray && !tray.isDestroyed()) {
-          tray.setContextMenu(buildTrayMenu({ showWindow }));
-        }
+        watchAutostartDir();
+        refreshTrayMenu();
       },
     },
     { type: 'separator' },
@@ -62,15 +96,6 @@ function buildTrayMenu({ showWindow }) {
       },
     },
   ]);
-
-  menu.on('menu-will-show', () => {
-    const item = menu.items.find((entry) => entry.label === 'Start on Login');
-    if (item) {
-      item.checked = isAutostartEnabled();
-    }
-  });
-
-  return menu;
 }
 
 function createTray({ showWindow }) {
@@ -94,8 +119,11 @@ function createTray({ showWindow }) {
     return null;
   }
 
+  showWindowRef = showWindow;
   tray.setToolTip('GeminiHarness');
-  tray.setContextMenu(buildTrayMenu({ showWindow }));
+  refreshTrayMenu();
+  attachTrayMenuRefresh(tray, refreshTrayMenu);
+  watchAutostartDir();
 
   return tray;
 }

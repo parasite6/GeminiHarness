@@ -9,41 +9,39 @@ const {
   MAX_ZOOM,
   ZOOM_STEP,
 } = require('./window-state');
+const { buildTitleBarInsetCss } = require('./titlebar-inset');
 
 const PARTITION = 'persist:gemini';
 const START_URL = 'https://gemini.google.com';
 const SAVE_DEBOUNCE_MS = 400;
 const TITLE_BAR_OVERLAY_HEIGHT = 36;
 const TITLE_BAR_OVERLAY_COLOR = '#131314';
-// Window Controls Overlay paints over the page. Gemini's header is
-// position:fixed, so pad+transform the root so Sign in (and the rest of
-// the chrome) sit below the native min/max/close cluster.
-const TITLE_BAR_OVERLAY_INSET_CSS = `
-html {
-  transform: translateY(${TITLE_BAR_OVERLAY_HEIGHT}px);
-  height: calc(100% - ${TITLE_BAR_OVERLAY_HEIGHT}px) !important;
-}
-html, body {
-  background-color: ${TITLE_BAR_OVERLAY_COLOR};
-}
-/* Transformed html sits below the overlay, so native WCO drag is gone.
-   Re-create a drag strip in the gap; leave the right side for min/max/close. */
-html::before {
-  content: '';
-  position: fixed;
-  top: -${TITLE_BAR_OVERLAY_HEIGHT}px;
-  left: 0;
-  width: env(titlebar-area-width, calc(100% - 148px));
-  height: ${TITLE_BAR_OVERLAY_HEIGHT}px;
-  -webkit-app-region: drag;
-  app-region: drag;
-}
-`;
 
 let mainWindow = null;
 let saveTimer = null;
 let persistedPath = null;
 let appIsQuitting = false;
+let titleBarInsetCssKey = null;
+
+async function applyTitleBarInset(contents) {
+  if (!contents || contents.isDestroyed()) {
+    return;
+  }
+  const css = buildTitleBarInsetCss({
+    overlayHeight: TITLE_BAR_OVERLAY_HEIGHT,
+    zoomFactor: contents.getZoomFactor(),
+    color: TITLE_BAR_OVERLAY_COLOR,
+  });
+  try {
+    if (titleBarInsetCssKey) {
+      await contents.removeInsertedCSS(titleBarInsetCssKey);
+      titleBarInsetCssKey = null;
+    }
+    titleBarInsetCssKey = await contents.insertCSS(css);
+  } catch (error) {
+    console.error('Failed to inset page for title bar overlay:', error);
+  }
+}
 
 function setAppQuitting(value) {
   appIsQuitting = Boolean(value);
@@ -131,6 +129,7 @@ function attachZoomShortcuts(win) {
       win.webContents.setZoomFactor(
         clampZoom(win.webContents.getZoomFactor() * ZOOM_STEP),
       );
+      applyTitleBarInset(win.webContents);
       scheduleSave();
       return;
     }
@@ -140,6 +139,7 @@ function attachZoomShortcuts(win) {
       win.webContents.setZoomFactor(
         clampZoom(win.webContents.getZoomFactor() / ZOOM_STEP),
       );
+      applyTitleBarInset(win.webContents);
       scheduleSave();
       return;
     }
@@ -147,11 +147,13 @@ function attachZoomShortcuts(win) {
     if (isZoomResetKey(input)) {
       event.preventDefault();
       win.webContents.setZoomFactor(1);
+      applyTitleBarInset(win.webContents);
       scheduleSave();
     }
   });
 
   win.webContents.on('zoom-changed', () => {
+    applyTitleBarInset(win.webContents);
     scheduleSave();
   });
 }
@@ -214,7 +216,8 @@ function createWindow() {
   const win = new BrowserWindow(options);
 
   win.webContents.on('dom-ready', () => {
-    win.webContents.insertCSS(TITLE_BAR_OVERLAY_INSET_CSS).catch(() => {});
+    titleBarInsetCssKey = null;
+    applyTitleBarInset(win.webContents);
   });
 
   attachStatePersistence(win);
@@ -224,6 +227,7 @@ function createWindow() {
     // "Message 0 rejected by interface blink.mojom.WidgetHost".
     if (state.zoomFactor !== 1) {
       win.webContents.setZoomFactor(state.zoomFactor);
+      applyTitleBarInset(win.webContents);
     }
     if (state.isMaximized) {
       win.maximize();
