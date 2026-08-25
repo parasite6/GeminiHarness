@@ -5,8 +5,10 @@
   "version": "1.0.0",
   "description": "A lightweight desktop wrapper for a logged-in gemini.google.com session.",
   "main": "src/main/main.js",
-  "author": "parasite6",
-  "email": "imstarwalking@duck.com",
+  "author": {
+    "name": "parasite6",
+    "email": "imstarwalking@duck.com"
+  },
   "license": "MIT",
   "homepage": "https://github.com/parasite6/GeminiHarness",
   "scripts": {
