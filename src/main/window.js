@@ -13,6 +13,32 @@ const {
 const PARTITION = 'persist:gemini';
 const START_URL = 'https://gemini.google.com';
 const SAVE_DEBOUNCE_MS = 400;
+const TITLE_BAR_OVERLAY_HEIGHT = 36;
+const TITLE_BAR_OVERLAY_COLOR = '#131314';
+// Window Controls Overlay paints over the page. Gemini's header is
+// position:fixed, so pad+transform the root so Sign in (and the rest of
+// the chrome) sit below the native min/max/close cluster.
+const TITLE_BAR_OVERLAY_INSET_CSS = `
+html {
+  transform: translateY(${TITLE_BAR_OVERLAY_HEIGHT}px);
+  height: calc(100% - ${TITLE_BAR_OVERLAY_HEIGHT}px) !important;
+}
+html, body {
+  background-color: ${TITLE_BAR_OVERLAY_COLOR};
+}
+/* Transformed html sits below the overlay, so native WCO drag is gone.
+   Re-create a drag strip in the gap; leave the right side for min/max/close. */
+html::before {
+  content: '';
+  position: fixed;
+  top: -${TITLE_BAR_OVERLAY_HEIGHT}px;
+  left: 0;
+  width: env(titlebar-area-width, calc(100% - 148px));
+  height: ${TITLE_BAR_OVERLAY_HEIGHT}px;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+`;
 
 let mainWindow = null;
 let saveTimer = null;
@@ -162,7 +188,16 @@ function createWindow() {
     minHeight: MIN_HEIGHT,
     show: false,
     title: 'GeminiHarness',
+    backgroundColor: TITLE_BAR_OVERLAY_COLOR,
     autoHideMenuBar: true,
+    // Hide the GTK/Chromium title bar; Linux still needs the overlay so
+    // native min/max/close remain available (see Electron custom title bar).
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: TITLE_BAR_OVERLAY_COLOR,
+      symbolColor: '#e3e3e3',
+      height: TITLE_BAR_OVERLAY_HEIGHT,
+    },
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -177,6 +212,10 @@ function createWindow() {
   }
 
   const win = new BrowserWindow(options);
+
+  win.webContents.on('dom-ready', () => {
+    win.webContents.insertCSS(TITLE_BAR_OVERLAY_INSET_CSS).catch(() => {});
+  });
 
   attachStatePersistence(win);
 
