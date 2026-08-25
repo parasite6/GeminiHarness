@@ -1,6 +1,6 @@
 # GeminiHarness
 
-A lightweight tray app for Fedora that keeps your Gemini session ready without a browser tab. Open a resizable window with your logged-in [gemini.google.com](https://gemini.google.com) — chat, Canvas, sources, memory, all intact. No API key, no billing. The session persists across restarts.
+A lightweight tray app for Fedora that keeps your Gemini session ready without a browser tab. Open a resizable window with your logged-in [gemini.google.com](https://gemini.google.com) — All of the features of that site per your account, all intact. No manual API key configuration. The session persists across restarts.
 
 ## Requirements
 
