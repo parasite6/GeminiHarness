@@ -2,8 +2,10 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   TRAY_MENU_REFRESH_EVENTS,
+  AUTOSTART_MENU_SYNC_MS,
   attachTrayMenuRefresh,
   refreshTrayContextMenu,
+  shouldRebuildAutostartMenu,
 } = require('../src/main/tray-menu');
 
 function fakeTray() {
@@ -50,6 +52,7 @@ describe('tray menu refresh', () => {
       'right-click',
       'double-click',
     ]);
+    assert.ok(AUTOSTART_MENU_SYNC_MS >= 500);
     const tray = fakeTray();
     let builds = 0;
     const refresh = () => {
@@ -64,5 +67,13 @@ describe('tray menu refresh', () => {
     assert.equal(builds, 3);
     assert.equal(tray.menus.length, 3);
     assert.equal('menu-will-show' in tray.handlers, false);
+  });
+
+  it('rebuilds the menu only when autostart checked state changes', () => {
+    assert.equal(shouldRebuildAutostartMenu(true, true), false);
+    assert.equal(shouldRebuildAutostartMenu(false, false), false);
+    assert.equal(shouldRebuildAutostartMenu(true, false), true);
+    assert.equal(shouldRebuildAutostartMenu(false, true), true);
+    assert.equal(shouldRebuildAutostartMenu(null, false), true);
   });
 });

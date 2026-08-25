@@ -1,4 +1,4 @@
-const { Menu, Tray, screen, app } = require('electron');
+const { Menu, Tray, screen, app, dialog } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { resolveAppRoot } = require('./asset-path');
@@ -10,13 +10,17 @@ const {
   shouldWatchAutostartFilename,
 } = require('./autostart');
 const {
+  AUTOSTART_MENU_SYNC_MS,
   attachTrayMenuRefresh,
   refreshTrayContextMenu,
+  shouldRebuildAutostartMenu,
 } = require('./tray-menu');
 
 let tray = null;
 let autostartWatcher = null;
+let autostartSyncTimer = null;
 let showWindowRef = null;
+let lastAutostartChecked = null;
 
 function resolveTrayIconPath() {
   const iconDir = path.join(resolveAppRoot(), 'assets', 'tray');
@@ -41,9 +45,19 @@ function refreshTrayMenu() {
   if (!showWindowRef) {
     return false;
   }
+  const checked = isAutostartEnabled();
+  lastAutostartChecked = checked;
   return refreshTrayContextMenu(tray, () =>
-    buildTrayMenu({ showWindow: showWindowRef }),
+    buildTrayMenu({ showWindow: showWindowRef, checked }),
   );
+}
+
+function syncAutostartMenuIfChanged() {
+  const checked = isAutostartEnabled();
+  if (!shouldRebuildAutostartMenu(lastAutostartChecked, checked)) {
+    return false;
+  }
+  return refreshTrayMenu();
 }
 
 function watchAutostartDir() {
@@ -51,10 +65,8 @@ function watchAutostartDir() {
     return;
   }
   const dir = autostartDir();
-  if (!fs.existsSync(dir)) {
-    return;
-  }
   try {
+    fs.mkdirSync(dir, { recursive: true });
     autostartWatcher = fs.watch(dir, (_event, filename) => {
       if (!shouldWatchAutostartFilename(filename)) {
         return;
@@ -66,7 +78,19 @@ function watchAutostartDir() {
   }
 }
 
-function buildTrayMenu({ showWindow }) {
+function startAutostartMenuSync() {
+  if (autostartSyncTimer) {
+    return;
+  }
+  autostartSyncTimer = setInterval(() => {
+    syncAutostartMenuIfChanged();
+  }, AUTOSTART_MENU_SYNC_MS);
+  if (typeof autostartSyncTimer.unref === 'function') {
+    autostartSyncTimer.unref();
+  }
+}
+
+function buildTrayMenu({ showWindow, checked = isAutostartEnabled() }) {
   return Menu.buildFromTemplate([
     {
       label: 'Open Window',
@@ -77,12 +101,16 @@ function buildTrayMenu({ showWindow }) {
     {
       label: 'Start on Login',
       type: 'checkbox',
-      checked: isAutostartEnabled(),
+      checked,
       click: (item) => {
         try {
           setAutostartEnabled(item.checked, resolveAutostartExec);
         } catch (error) {
           console.error('Failed to update autostart:', error);
+          dialog.showErrorBox(
+            'GeminiHarness',
+            `Could not update Start on Login.\n\n${error.message || error}`,
+          );
         }
         watchAutostartDir();
         refreshTrayMenu();
@@ -124,6 +152,7 @@ function createTray({ showWindow }) {
   refreshTrayMenu();
   attachTrayMenuRefresh(tray, refreshTrayMenu);
   watchAutostartDir();
+  startAutostartMenuSync();
 
   return tray;
 }

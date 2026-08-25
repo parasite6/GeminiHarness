@@ -1,9 +1,10 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  shouldShowWindowOnSecondInstance,
+  classifySecondInstance,
   shouldOpenWindowOnReady,
   shouldQuitHiddenWithoutTray,
+  HIDDEN_LAUNCH_GRACE_MS,
 } = require('../src/main/startup');
 
 describe('shouldOpenWindowOnReady', () => {
@@ -13,38 +14,102 @@ describe('shouldOpenWindowOnReady', () => {
   });
 });
 
-describe('shouldShowWindowOnSecondInstance', () => {
-  it('does not show a window before ready', () => {
+describe('classifySecondInstance', () => {
+  it('ignores a second launch that requested --hidden', () => {
     assert.equal(
-      shouldShowWindowOnSecondInstance({
+      classifySecondInstance({
+        isReady: true,
+        commandLine: ['app', '--hidden'],
+        primaryLaunchedHidden: false,
+        windowEverShown: false,
+        hiddenLaunchAt: null,
+        now: 1000,
+      }),
+      'ignore',
+    );
+  });
+
+  it('queues a non-hidden second launch that arrives before ready', () => {
+    assert.equal(
+      classifySecondInstance({
         isReady: false,
-        commandLine: ['electron', '.'],
+        commandLine: ['app'],
+        primaryLaunchedHidden: false,
+        windowEverShown: false,
+        hiddenLaunchAt: null,
+        now: 1000,
       }),
-      false,
+      'queue',
     );
   });
 
-  it('does not show a window when the second launch requested --hidden', () => {
+  it('ignores --hidden before ready (do not queue a show)', () => {
     assert.equal(
-      shouldShowWindowOnSecondInstance({
-        isReady: true,
-        commandLine: [
-          '/opt/GeminiHarness/geminiharness',
-          '--ozone-platform=x11',
-          '--hidden',
-        ],
+      classifySecondInstance({
+        isReady: false,
+        commandLine: ['app', '--hidden'],
+        primaryLaunchedHidden: true,
+        windowEverShown: false,
+        hiddenLaunchAt: 0,
+        now: 1000,
       }),
-      false,
+      'ignore',
     );
   });
 
-  it('shows a window for a second launch that is not hidden', () => {
+  it('swallows non-hidden launches during the hidden-start grace window', () => {
     assert.equal(
-      shouldShowWindowOnSecondInstance({
+      classifySecondInstance({
         isReady: true,
-        commandLine: ['/opt/GeminiHarness/geminiharness'],
+        commandLine: ['app'],
+        primaryLaunchedHidden: true,
+        windowEverShown: false,
+        hiddenLaunchAt: 1000,
+        now: 1000 + HIDDEN_LAUNCH_GRACE_MS - 1,
       }),
-      true,
+      'ignore',
+    );
+  });
+
+  it('shows after the grace window even if still tray-only', () => {
+    assert.equal(
+      classifySecondInstance({
+        isReady: true,
+        commandLine: ['app'],
+        primaryLaunchedHidden: true,
+        windowEverShown: false,
+        hiddenLaunchAt: 1000,
+        now: 1000 + HIDDEN_LAUNCH_GRACE_MS,
+      }),
+      'show',
+    );
+  });
+
+  it('shows during grace if the user already opened a window', () => {
+    assert.equal(
+      classifySecondInstance({
+        isReady: true,
+        commandLine: ['app'],
+        primaryLaunchedHidden: true,
+        windowEverShown: true,
+        hiddenLaunchAt: 1000,
+        now: 1000 + 1,
+      }),
+      'show',
+    );
+  });
+
+  it('shows a normal second launch when the primary was not hidden', () => {
+    assert.equal(
+      classifySecondInstance({
+        isReady: true,
+        commandLine: ['app'],
+        primaryLaunchedHidden: false,
+        windowEverShown: false,
+        hiddenLaunchAt: null,
+        now: 5000,
+      }),
+      'show',
     );
   });
 });

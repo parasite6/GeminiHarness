@@ -22,8 +22,10 @@ let saveTimer = null;
 let persistedPath = null;
 let appIsQuitting = false;
 let titleBarInsetCssKey = null;
+let titleBarInsetChain = Promise.resolve();
+let windowEverShown = false;
 
-async function applyTitleBarInset(contents) {
+async function applyTitleBarInsetOnce(contents) {
   if (!contents || contents.isDestroyed()) {
     return;
   }
@@ -41,6 +43,23 @@ async function applyTitleBarInset(contents) {
   } catch (error) {
     console.error('Failed to inset page for title bar overlay:', error);
   }
+}
+
+function applyTitleBarInset(contents) {
+  titleBarInsetChain = titleBarInsetChain
+    .then(() => applyTitleBarInsetOnce(contents))
+    .catch((error) => {
+      console.error('Failed to inset page for title bar overlay:', error);
+    });
+  return titleBarInsetChain;
+}
+
+function markWindowEverShown() {
+  windowEverShown = true;
+}
+
+function hasWindowEverShown() {
+  return windowEverShown;
 }
 
 function setAppQuitting(value) {
@@ -212,7 +231,8 @@ function createWindow() {
   const win = new BrowserWindow(options);
 
   win.webContents.on('dom-ready', () => {
-    titleBarInsetCssKey = null;
+    // Replace inset via removeInsertedCSS inside applyTitleBarInset —
+    // do not clear titleBarInsetCssKey here or stacked translates accumulate.
     applyTitleBarInset(win.webContents);
   });
 
@@ -228,6 +248,7 @@ function createWindow() {
     if (state.isMaximized) {
       win.maximize();
     }
+    markWindowEverShown();
     win.show();
   });
 
@@ -254,6 +275,7 @@ function showMainWindow() {
   if (win.isMinimized()) {
     win.restore();
   }
+  markWindowEverShown();
   win.show();
   win.focus();
   return win;
@@ -265,4 +287,6 @@ module.exports = {
   showMainWindow,
   flushWindowState,
   setAppQuitting,
+  markWindowEverShown,
+  hasWindowEverShown,
 };

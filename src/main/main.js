@@ -5,13 +5,14 @@ const {
   showMainWindow,
   flushWindowState,
   setAppQuitting,
+  hasWindowEverShown,
 } = require('./window');
 const { attachNavigationHandlers } = require('./navigation');
 const { createTray, getTray } = require('./tray');
 const { wantsHiddenLaunch } = require('./autostart');
 const {
   shouldOpenWindowOnReady,
-  shouldShowWindowOnSecondInstance,
+  classifySecondInstance,
   shouldQuitHiddenWithoutTray,
 } = require('./startup');
 
@@ -32,19 +33,29 @@ if (!gotLock) {
   return;
 }
 
-app.on('second-instance', (_event, commandLine) => {
-  // If the second launch arrives before whenReady, do not create a window
-  // here — whenReady owns first creation. After ready, focus/show only
-  // when that launch did not request --hidden (autostart / session restore).
-  if (
-    !shouldShowWindowOnSecondInstance({
-      isReady: app.isReady(),
-      commandLine,
-    })
-  ) {
+let primaryLaunchedHidden = false;
+let hiddenLaunchAt = null;
+let pendingShowFromSecondInstance = false;
+
+function handleSecondInstance(commandLine) {
+  const action = classifySecondInstance({
+    isReady: app.isReady(),
+    commandLine,
+    primaryLaunchedHidden,
+    windowEverShown: hasWindowEverShown(),
+    hiddenLaunchAt,
+  });
+  if (action === 'queue') {
+    pendingShowFromSecondInstance = true;
     return;
   }
-  showMainWindow();
+  if (action === 'show') {
+    showMainWindow();
+  }
+}
+
+app.on('second-instance', (_event, commandLine) => {
+  handleSecondInstance(commandLine);
 });
 
 app.on('web-contents-created', (_event, contents) => {
@@ -55,6 +66,11 @@ app.whenReady().then(() => {
   // Autostart launches with --hidden: tray only, no window until the user
   // opens one via the menu (or a future hotkey).
   const hidden = wantsHiddenLaunch();
+  primaryLaunchedHidden = hidden;
+  if (hidden) {
+    hiddenLaunchAt = Date.now();
+  }
+
   const trayIcon = createTray({ showWindow: showMainWindow });
   if (shouldQuitHiddenWithoutTray({ hidden, tray: trayIcon })) {
     console.error(
@@ -63,6 +79,13 @@ app.whenReady().then(() => {
     app.quit();
     return;
   }
+
+  if (pendingShowFromSecondInstance) {
+    pendingShowFromSecondInstance = false;
+    showMainWindow();
+    return;
+  }
+
   if (!shouldOpenWindowOnReady({ hidden })) {
     return;
   }

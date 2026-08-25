@@ -1,4 +1,7 @@
 const TRAY_MENU_REFRESH_EVENTS = ['click', 'right-click', 'double-click'];
+// AppIndicator often never emits click/menu-will-show; poll so GNOME
+// Startup Applications edits still update the checkbox before the next open.
+const AUTOSTART_MENU_SYNC_MS = 1000;
 
 function refreshTrayContextMenu(tray, buildMenu) {
   if (!tray || (typeof tray.isDestroyed === 'function' && tray.isDestroyed())) {
@@ -14,8 +17,14 @@ function attachTrayMenuRefresh(tray, refresh) {
   }
 }
 
+function shouldRebuildAutostartMenu(previousChecked, nextChecked) {
+  return previousChecked !== nextChecked;
+}
+
 module.exports = {
   TRAY_MENU_REFRESH_EVENTS,
+  AUTOSTART_MENU_SYNC_MS,
   refreshTrayContextMenu,
   attachTrayMenuRefresh,
+  shouldRebuildAutostartMenu,
 };
