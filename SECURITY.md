@@ -5,11 +5,13 @@
 This app is a desktop wrapper around your own logged-in gemini.google.com
 session — an Electron shell, a tray icon, and window plumbing. It does not
 proxy, intercept, or modify network traffic to Google, does not spoof the
-user agent, does not inject scripts, and does not execute anything on
-Gemini's behalf. It does inject a small layout CSS inset so Gemini’s
-fixed header sits below the custom title-bar overlay (zoom-scaled; not
-theming or scraping). It stores no credentials of its own; auth is
-Google's normal sign-in flow inside the embedded Chromium session
+user agent, and does not execute anything on Gemini's behalf. It does
+inject a small layout CSS inset so Gemini’s fixed header sits below the
+custom title-bar overlay (zoom-scaled; not scraping), plus a script that
+appends a reload button in that overlay. The button calls a sandboxed
+preload bridge (`geminiharness:reload`); main ignores that IPC unless it
+comes from the page main frame. It stores no credentials of its own;
+auth is Google's normal sign-in flow inside the embedded Chromium session
 (`persist:gemini`).
 
 Top-level navigations and `window.open` / `target=_blank` are filtered:
@@ -33,7 +35,7 @@ Under the app userData path (typically `~/.config/GeminiHarness` on Linux):
 
 - Chromium partition data for `persist:gemini` (cookies, local storage, etc.
   for the embedded Google session)
-- `window-state.json` (geometry, maximize, zoom — not credentials)
+- `window-state.json` (geometry, maximize, zoom, always-on-top, size-lock — not credentials)
 
 Outside userData, if **Start on Login** is enabled:
 
