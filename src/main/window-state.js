@@ -166,6 +166,17 @@ function load(filePath, displays, fsModule = fs) {
   }
 }
 
+function restoreWindowFlagSteps({ isMaximized, sizeLocked } = {}) {
+  const steps = [];
+  if (isMaximized === true) {
+    steps.push('maximize');
+  }
+  if (sizeLocked === true) {
+    steps.push('lock-size');
+  }
+  return steps;
+}
+
 function save(filePath, state, fsModule = fs) {
   try {
     const dir = path.dirname(filePath);
@@ -190,6 +201,7 @@ module.exports = {
   stateFilePath,
   sanitizeState,
   clampBoundsToDisplays,
+  restoreWindowFlagSteps,
   load,
   save,
 };

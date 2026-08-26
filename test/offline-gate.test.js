@@ -16,6 +16,9 @@ const {
   isHarnessOfflinePage,
   canReachGemini,
   decideTitleBarReload,
+  START_URL,
+  captureReloadResumeUrl,
+  resolveGatedLoadUrl,
 } = require('../src/main/offline-gate');
 
 describe('offline-gate helpers', () => {
@@ -262,6 +265,27 @@ describe('offline-gate helpers', () => {
         isOfflinePage: false,
       }),
       'probe-then-reload',
+    );
+  });
+
+  it('retries a stashed Gemini conversation URL instead of START_URL', () => {
+    const chat = 'https://gemini.google.com/app/abc123';
+    assert.equal(captureReloadResumeUrl(chat), chat);
+    assert.equal(captureReloadResumeUrl(START_URL), START_URL);
+    assert.equal(captureReloadResumeUrl('https://accounts.google.com/'), null);
+    assert.equal(captureReloadResumeUrl('file:///tmp/offline.html'), null);
+    assert.equal(captureReloadResumeUrl(''), null);
+
+    assert.equal(resolveGatedLoadUrl({ resumeUrl: chat }), chat);
+    assert.equal(resolveGatedLoadUrl({ resumeUrl: null }), START_URL);
+    assert.equal(resolveGatedLoadUrl({}), START_URL);
+    assert.equal(
+      resolveGatedLoadUrl({ resumeUrl: 'https://evil.example/app' }),
+      START_URL,
+    );
+    assert.equal(
+      resolveGatedLoadUrl({ resumeUrl: 'file:///tmp/offline.html' }),
+      START_URL,
     );
   });
 

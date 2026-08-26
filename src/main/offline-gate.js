@@ -102,6 +102,18 @@ function decideTitleBarReload({
   return 'probe-then-reload';
 }
 
+function captureReloadResumeUrl(url) {
+  if (typeof url !== 'string' || !isGeminiStartUrl(url)) {
+    return null;
+  }
+  return url;
+}
+
+function resolveGatedLoadUrl({ resumeUrl, startUrl = START_URL } = {}) {
+  const captured = captureReloadResumeUrl(resumeUrl);
+  return captured || startUrl;
+}
+
 function shouldResumeOfflineRetry({ gateActive }) {
   return gateActive === true;
 }
@@ -198,6 +210,8 @@ module.exports = {
   shouldResumeOfflineRetry,
   canBeginOfflineAttempt,
   decideTitleBarReload,
+  captureReloadResumeUrl,
+  resolveGatedLoadUrl,
   interpretReachabilityResponse,
   offlinePagePath,
   isHarnessOfflinePage,

@@ -4,6 +4,7 @@ const {
   load,
   save,
   stateFilePath,
+  restoreWindowFlagSteps,
   MIN_WIDTH,
   MIN_HEIGHT,
   MIN_ZOOM,
@@ -18,7 +19,6 @@ const {
   isTitleBarReloadAuthUrl,
 } = require('./titlebar-inset');
 const {
-  START_URL,
   OFFLINE_RETRY_MS,
   shouldOfferOfflineGate,
   shouldClearOfflineGate,
@@ -29,6 +29,8 @@ const {
   isHarnessOfflinePage,
   offlinePagePath,
   canReachGemini,
+  captureReloadResumeUrl,
+  resolveGatedLoadUrl,
 } = require('./offline-gate');
 
 const PARTITION = 'persist:gemini';
@@ -46,6 +48,7 @@ let windowEverShown = false;
 let offlineGateActive = false;
 let offlineRetryTimer = null;
 let offlineAttemptInFlight = false;
+let reloadResumeUrl = null;
 
 async function applyTitleBarInsetOnce(contents) {
   if (!contents || contents.isDestroyed()) {
@@ -342,6 +345,7 @@ async function handleTitleBarReload(win) {
   if (!canBeginOfflineAttempt(offlineAttemptInFlight)) {
     return;
   }
+  reloadResumeUrl = captureReloadResumeUrl(currentUrl);
   offlineAttemptInFlight = true;
   try {
     if (!(await probeGemini(win))) {
@@ -351,6 +355,7 @@ async function handleTitleBarReload(win) {
       }
       return;
     }
+    reloadResumeUrl = null;
   } finally {
     offlineAttemptInFlight = false;
   }
@@ -413,7 +418,7 @@ async function attemptGeminiLoad(win, { fromRetry = false } = {}) {
     // Keep the gate active until Gemini (or auth) actually finishes loading
     // so a failed first navigation still gets the custom offline page.
     stopOfflineRetry();
-    win.loadURL(START_URL);
+    win.loadURL(resolveGatedLoadUrl({ resumeUrl: reloadResumeUrl }));
   } finally {
     offlineAttemptInFlight = false;
   }
@@ -440,6 +445,7 @@ function attachOfflineGate(win) {
       })
     ) {
       offlineGateActive = false;
+      reloadResumeUrl = null;
       stopOfflineRetry();
       return;
     }
@@ -516,9 +522,6 @@ function createWindow() {
   if (state.alwaysOnTop) {
     win.setAlwaysOnTop(true);
   }
-  if (state.sizeLocked) {
-    win.setResizable(false);
-  }
 
   win.webContents.on('dom-ready', () => {
     // Replace inset via removeInsertedCSS inside applyTitleBarInset —
@@ -537,8 +540,13 @@ function createWindow() {
       win.webContents.setZoomFactor(state.zoomFactor);
       applyTitleBarInset(win.webContents);
     }
-    if (state.isMaximized) {
-      win.maximize();
+    for (const step of restoreWindowFlagSteps(state)) {
+      if (step === 'maximize') {
+        win.maximize();
+      }
+      if (step === 'lock-size') {
+        win.setResizable(false);
+      }
     }
     markWindowEverShown();
     win.show();

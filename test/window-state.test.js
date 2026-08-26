@@ -10,6 +10,7 @@ const {
   load,
   save,
   stateFilePath,
+  restoreWindowFlagSteps,
 } = require('../src/main/window-state');
 
 const DISPLAY_1920 = {
@@ -59,6 +60,26 @@ describe('sanitizeState', () => {
     assert.equal(sanitizeState({ sizeLocked: true }).sizeLocked, true);
     assert.equal(sanitizeState({ sizeLocked: 'yes' }).sizeLocked, false);
     assert.equal(sanitizeState({ sizeLocked: 1 }).sizeLocked, false);
+  });
+
+  it('applies maximize before size-lock when both were saved', () => {
+    assert.deepEqual(
+      restoreWindowFlagSteps({ isMaximized: true, sizeLocked: true }),
+      ['maximize', 'lock-size'],
+    );
+    assert.deepEqual(
+      restoreWindowFlagSteps({ isMaximized: false, sizeLocked: true }),
+      ['lock-size'],
+    );
+    assert.deepEqual(
+      restoreWindowFlagSteps({ isMaximized: true, sizeLocked: false }),
+      ['maximize'],
+    );
+    assert.deepEqual(restoreWindowFlagSteps({}), []);
+    assert.deepEqual(
+      restoreWindowFlagSteps({ isMaximized: 'yes', sizeLocked: 1 }),
+      [],
+    );
   });
 
   it('does not alter saved width/height when sizeLocked is set', () => {

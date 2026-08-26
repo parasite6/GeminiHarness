@@ -125,6 +125,9 @@ fi
 
 
 %changelog
+* Wed Aug 26 2026 parasite6 <myworkforstore@proton.me> - 1.1.0-1
+- Title-bar overlay reload, always-on-top, and lock window size
+
 * Tue Aug 25 2026 parasite6 <myworkforstore@proton.me> - 1.0.0-1
 - Initial COPR/SCM package: npm ci + electron-builder RPM extract
 - Pin Electron 43.2.0 for GNOME AppIndicator (electron#52674)
