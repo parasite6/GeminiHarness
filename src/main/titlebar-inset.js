@@ -44,6 +44,43 @@ body {
   height: calc(100% - ${px}px) !important;
   background-color: ${color};
 }
+@keyframes geminiharness-titlebar-breathe {
+  from { background-position: 0 0, 0% 0; }
+  to { background-position: 0 0, 100% 0; }
+}
+/* Visual-only strip. pointer-events:none so drag + reload keep working.
+   Native WCO is transparent so this CSS paints the bar. Fade lives inside
+   the overlay height — no extra slab below the chrome. */
+html::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: ${px}px;
+  z-index: 1;
+  pointer-events: none;
+  background-color: ${color};
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 18%,
+      ${color} 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(30, 90, 196, 0.42) 0%,
+      rgba(92, 48, 168, 0.4) 35%,
+      rgba(168, 48, 120, 0.38) 50%,
+      rgba(92, 48, 168, 0.4) 65%,
+      rgba(30, 90, 196, 0.42) 100%
+    );
+  background-size: 100% 100%, 240% 100%;
+  background-repeat: no-repeat;
+  animation: geminiharness-titlebar-breathe 16s ease-in-out infinite alternate;
+  will-change: background-position;
+}
 /* Native WCO drag is covered by page content; recreate a strip in the gap.
    html is not transformed, so top:0 is the viewport (under the overlay). */
 html::before {
@@ -51,6 +88,7 @@ html::before {
   position: fixed;
   top: 0;
   left: ${px}px;
+  z-index: 2;
   width: calc(env(titlebar-area-width, calc(100% - 148px)) - ${px}px);
   height: ${px}px;
   -webkit-app-region: drag;

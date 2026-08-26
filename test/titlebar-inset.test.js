@@ -71,6 +71,24 @@ describe('buildTitleBarInsetCss', () => {
     assert.match(css, new RegExp(`#${id}[^}]*height:\\s*18px`));
     assert.doesNotMatch(css, /html\s*\{[^}]*transform:/s);
   });
+
+  it('paints a slow CSS-only breathing gradient that fades into the page', () => {
+    const css = buildTitleBarInsetCss({
+      overlayHeight: 36,
+      zoomFactor: 1,
+      color: '#131314',
+    });
+    assert.match(css, /html::after\s*\{/);
+    assert.match(css, /@keyframes geminiharness-titlebar-breathe/);
+    assert.match(css, /animation:[^;]*geminiharness-titlebar-breathe/);
+    assert.match(css, /16s/);
+    assert.match(css, /html::after[^}]*pointer-events:\s*none/s);
+    assert.match(css, /html::after[^}]*height:\s*36px/s);
+    assert.match(css, /linear-gradient\(\s*to bottom/);
+    assert.match(css, /linear-gradient\(\s*90deg/);
+    assert.doesNotMatch(css, /html\s*\{[^}]*transform:/s);
+    assert.match(css, /body\s*\{[^}]*transform:\s*translateY\(36px\)/s);
+  });
 });
 
 describe('buildTitleBarReloadScript', () => {

@@ -438,7 +438,8 @@ function createWindow() {
     // native min/max/close remain available (see Electron custom title bar).
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: TITLE_BAR_OVERLAY_COLOR,
+      // Transparent so the injected CSS gradient paints the strip.
+      color: '#00000000',
       symbolColor: '#e3e3e3',
       height: TITLE_BAR_OVERLAY_HEIGHT,
     },
