@@ -17,7 +17,7 @@
 %global __strip /bin/true
 
 Name:           geminiharness
-Version:        1.0.0
+Version:        1.1.0
 Release:        1%{?dist}
 Summary:        A lightweight desktop wrapper for a logged-in gemini.google.com session
 
