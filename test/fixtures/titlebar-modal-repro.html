@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>titlebar modal repro</title>
+    <style>
+      /* Baseline page chrome similar to Gemini */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        color: #e3e3e3;
+      }
+      .header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        background: #1e1f20;
+        z-index: 10;
+      }
+      .main {
+        padding: 72px 24px 24px;
+        min-height: 120vh;
+      }
+      .backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 20;
+      }
+      .dialog {
+        display: none;
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #2d2e30;
+        padding: 24px;
+        border-radius: 12px;
+        z-index: 30;
+        min-width: 280px;
+      }
+      .open .backdrop,
+      .open .dialog {
+        display: block;
+      }
+      /* Angular CDK global scrollblock (simplified from @angular/cdk/overlay) */
+      .cdk-global-scrollblock {
+        position: fixed;
+        width: 100%;
+        overflow-y: scroll;
+        overscroll-behavior: none;
+      }
+      #probe {
+        position: fixed;
+        left: 8px;
+        bottom: 8px;
+        background: #000;
+        color: #0f0;
+        font: 12px monospace;
+        padding: 8px;
+        z-index: 50;
+        white-space: pre;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <strong>Gemini (fake)</strong>
+      <span>Upgrade</span>
+    </div>
+    <div class="main">
+      <p>Scrollable content to mimic the app shell.</p>
+      <button id="open">Open modal (CDK scrollblock)</button>
+      <button id="close">Close modal</button>
+      <div style="height: 800px"></div>
+    </div>
+    <div class="backdrop"></div>
+    <div class="dialog">
+      <div>Delete chat?</div>
+      <button id="close2">Cancel</button>
+    </div>
+    <div id="probe"></div>
+    <script>
+      const probe = document.getElementById('probe');
+      function measure() {
+        const html = document.documentElement;
+        const header = document.querySelector('.header');
+        const htmlStyle = getComputedStyle(html);
+        const headerRect = header.getBoundingClientRect();
+        probe.textContent = [
+          'html.position=' + htmlStyle.position,
+          'html.transform=' + htmlStyle.transform,
+          'html.top=' + html.style.top,
+          'html.class=' + html.className,
+          'header.top=' + headerRect.top.toFixed(1),
+          'header.height=' + headerRect.height.toFixed(1),
+          'scrollY=' + window.scrollY,
+        ].join('\n');
+      }
+
+      function openModal() {
+        document.body.classList.add('open');
+        const html = document.documentElement;
+        // Mirror CDK BlockScrollStrategy / ViewportRuler:
+        // scrollTop ≈ -documentElement.getBoundingClientRect().top
+        const rect = html.getBoundingClientRect();
+        const top = -rect.top || window.scrollY || 0;
+        const left = -rect.left || window.scrollX || 0;
+        html.style.left = `${-left}px`;
+        html.style.top = `${-top}px`;
+        html.classList.add('cdk-global-scrollblock');
+        measure();
+      }
+
+      function closeModal() {
+        document.body.classList.remove('open');
+        const html = document.documentElement;
+        html.classList.remove('cdk-global-scrollblock');
+        html.style.left = '';
+        html.style.top = '';
+        measure();
+      }
+
+      document.getElementById('open').onclick = openModal;
+      document.getElementById('close').onclick = closeModal;
+      document.getElementById('close2').onclick = closeModal;
+      window.addEventListener('scroll', measure);
+      measure();
+    </script>
+  </body>
+</html>

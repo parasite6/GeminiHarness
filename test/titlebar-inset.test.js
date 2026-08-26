@@ -22,15 +22,16 @@ describe('overlayInsetCssPx', () => {
 });
 
 describe('buildTitleBarInsetCss', () => {
-  it('writes the zoom-scaled translate and drag strip', () => {
+  it('writes the zoom-scaled body translate and viewport drag strip', () => {
     const css = buildTitleBarInsetCss({
       overlayHeight: 36,
       zoomFactor: 2,
       color: '#131314',
     });
-    assert.match(css, /translateY\(18px\)/);
+    assert.match(css, /body\s*\{[^}]*transform:\s*translateY\(18px\)/s);
+    assert.doesNotMatch(css, /html\s*\{[^}]*transform:/s);
     assert.match(css, /height: calc\(100% - 18px\)/);
-    assert.match(css, /top: -18px;/);
+    assert.match(css, /top: 0;/);
     assert.match(css, /height: 18px;/);
     assert.match(css, /background-color: #131314/);
   });

@@ -6,20 +6,28 @@ function overlayInsetCssPx(overlayHeight, zoomFactor) {
 
 function buildTitleBarInsetCss({ overlayHeight, zoomFactor, color }) {
   const px = overlayInsetCssPx(overlayHeight, zoomFactor);
+  // Transform body — not html. Angular CDK BlockScrollStrategy locks scroll by
+  // setting position:fixed and top: -getBoundingClientRect().top on <html>.
+  // A translateY on html makes that rect.top equal the inset, so CDK writes
+  // style.top to +inset and stacks with our transform (double gap under WCO
+  // whenever a Material dialog opens). Body transform still shifts Gemini's
+  // position:fixed chrome below the overlay without poisoning that measurement.
   return `
 html {
-  transform: translateY(${px}px);
-  height: calc(100% - ${px}px) !important;
-}
-html, body {
+  height: 100%;
   background-color: ${color};
 }
-/* Transformed html sits below the overlay, so native WCO drag is gone.
-   Re-create a drag strip in the gap; leave the right side for min/max/close. */
+body {
+  transform: translateY(${px}px);
+  height: calc(100% - ${px}px) !important;
+  background-color: ${color};
+}
+/* Native WCO drag is covered by page content; recreate a strip in the gap.
+   html is not transformed, so top:0 is the viewport (under the overlay). */
 html::before {
   content: '';
   position: fixed;
-  top: -${px}px;
+  top: 0;
   left: 0;
   width: env(titlebar-area-width, calc(100% - 148px));
   height: ${px}px;
