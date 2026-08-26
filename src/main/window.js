@@ -111,6 +111,7 @@ function collectWindowState(win) {
     height: bounds.height,
     isMaximized: win.isMaximized(),
     zoomFactor: win.webContents.getZoomFactor(),
+    alwaysOnTop: win.isAlwaysOnTop() === true,
   };
 }
 
@@ -120,6 +121,36 @@ function persist() {
     return;
   }
   save(persistedPath, collectWindowState(win));
+}
+
+function ensurePersistedPath() {
+  if (!persistedPath) {
+    persistedPath = stateFilePath(app.getPath('userData'));
+  }
+  return persistedPath;
+}
+
+function isMainWindowAlwaysOnTop() {
+  const win = mainWindow;
+  if (win && !win.isDestroyed()) {
+    return win.isAlwaysOnTop() === true;
+  }
+  ensurePersistedPath();
+  return load(persistedPath, currentDisplays()).alwaysOnTop === true;
+}
+
+function setMainWindowAlwaysOnTop(value) {
+  const onTop = value === true;
+  const win = mainWindow;
+  if (win && !win.isDestroyed()) {
+    win.setAlwaysOnTop(onTop);
+    persist();
+    return win.isAlwaysOnTop() === true;
+  }
+  ensurePersistedPath();
+  const state = load(persistedPath, currentDisplays());
+  save(persistedPath, { ...state, alwaysOnTop: onTop });
+  return onTop;
 }
 
 function scheduleSave() {
@@ -458,6 +489,9 @@ function createWindow() {
   }
 
   const win = new BrowserWindow(options);
+  if (state.alwaysOnTop) {
+    win.setAlwaysOnTop(true);
+  }
 
   win.webContents.on('dom-ready', () => {
     // Replace inset via removeInsertedCSS inside applyTitleBarInset —
@@ -532,4 +566,6 @@ module.exports = {
   setAppQuitting,
   markWindowEverShown,
   hasWindowEverShown,
+  isMainWindowAlwaysOnTop,
+  setMainWindowAlwaysOnTop,
 };

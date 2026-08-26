@@ -7,6 +7,8 @@ const {
   flushWindowState,
   setAppQuitting,
   hasWindowEverShown,
+  isMainWindowAlwaysOnTop,
+  setMainWindowAlwaysOnTop,
 } = require('./window');
 const { attachNavigationHandlers } = require('./navigation');
 const { createTray, getTray } = require('./tray');
@@ -72,7 +74,11 @@ app.whenReady().then(() => {
     hiddenLaunchAt = Date.now();
   }
 
-  const trayIcon = createTray({ showWindow: showMainWindow });
+  const trayIcon = createTray({
+    showWindow: showMainWindow,
+    isAlwaysOnTop: isMainWindowAlwaysOnTop,
+    setAlwaysOnTop: setMainWindowAlwaysOnTop,
+  });
   if (shouldQuitHiddenWithoutTray({ hidden, tray: trayIcon })) {
     console.error(
       'Tray icon failed during --hidden launch; quitting so the process cannot linger unseen.',

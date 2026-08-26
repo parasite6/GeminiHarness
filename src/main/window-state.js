@@ -18,6 +18,7 @@ function defaultState() {
     height: DEFAULT_HEIGHT,
     isMaximized: false,
     zoomFactor: 1,
+    alwaysOnTop: false,
   };
 }
 
@@ -58,6 +59,7 @@ function sanitizeState(raw) {
     height: height === null ? defaults.height : Math.max(height, MIN_HEIGHT),
     isMaximized: source.isMaximized === true,
     zoomFactor,
+    alwaysOnTop: source.alwaysOnTop === true,
   };
 
   if (x !== null && y !== null) {

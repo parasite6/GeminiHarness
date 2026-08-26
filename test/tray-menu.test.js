@@ -6,6 +6,7 @@ const {
   attachTrayMenuRefresh,
   refreshTrayContextMenu,
   shouldRebuildAutostartMenu,
+  readAlwaysOnTopChecked,
 } = require('../src/main/tray-menu');
 
 function fakeTray() {
@@ -75,5 +76,20 @@ describe('tray menu refresh', () => {
     assert.equal(shouldRebuildAutostartMenu(true, false), true);
     assert.equal(shouldRebuildAutostartMenu(false, true), true);
     assert.equal(shouldRebuildAutostartMenu(null, false), true);
+  });
+
+  it('reads always-on-top from the live window, not a cached flag', () => {
+    assert.equal(readAlwaysOnTopChecked({ isAlwaysOnTop: () => true }), true);
+    assert.equal(readAlwaysOnTopChecked({ isAlwaysOnTop: () => false }), false);
+    assert.equal(readAlwaysOnTopChecked({ isAlwaysOnTop: () => 1 }), false);
+    assert.equal(readAlwaysOnTopChecked({}), false);
+    assert.equal(
+      readAlwaysOnTopChecked({
+        isAlwaysOnTop() {
+          throw new Error('gone');
+        },
+      }),
+      false,
+    );
   });
 });

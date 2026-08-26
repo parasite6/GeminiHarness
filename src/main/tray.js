@@ -15,12 +15,15 @@ const {
   attachTrayMenuRefresh,
   refreshTrayContextMenu,
   shouldRebuildAutostartMenu,
+  readAlwaysOnTopChecked,
 } = require('./tray-menu');
 
 let tray = null;
 let autostartWatcher = null;
 let autostartSyncTimer = null;
 let showWindowRef = null;
+let isAlwaysOnTopRef = () => false;
+let setAlwaysOnTopRef = () => {};
 let lastAutostartChecked = null;
 
 function resolveTrayIconPath() {
@@ -71,6 +74,9 @@ function refreshTrayMenu() {
       showWindow: showWindowRef,
       checked,
       hotkeyChecked: readHotkeyEnabledSafe(),
+      alwaysOnTopChecked: readAlwaysOnTopChecked({
+        isAlwaysOnTop: isAlwaysOnTopRef,
+      }),
     }),
   );
 }
@@ -131,6 +137,9 @@ function buildTrayMenu({
   showWindow,
   checked = isAutostartEnabled(),
   hotkeyChecked = readHotkeyEnabledSafe(),
+  alwaysOnTopChecked = readAlwaysOnTopChecked({
+    isAlwaysOnTop: isAlwaysOnTopRef,
+  }),
 }) {
   return Menu.buildFromTemplate([
     {
@@ -182,6 +191,15 @@ function buildTrayMenu({
         refreshTrayMenu();
       },
     },
+    {
+      label: 'Always on Top',
+      type: 'checkbox',
+      checked: alwaysOnTopChecked,
+      click: (item) => {
+        setAlwaysOnTopRef(item.checked);
+        refreshTrayMenu();
+      },
+    },
     { type: 'separator' },
     {
       label: 'Quit Gemini',
@@ -192,7 +210,7 @@ function buildTrayMenu({
   ]);
 }
 
-function createTray({ showWindow }) {
+function createTray({ showWindow, isAlwaysOnTop, setAlwaysOnTop }) {
   if (tray) {
     return tray;
   }
@@ -214,6 +232,10 @@ function createTray({ showWindow }) {
   }
 
   showWindowRef = showWindow;
+  isAlwaysOnTopRef =
+    typeof isAlwaysOnTop === 'function' ? isAlwaysOnTop : () => false;
+  setAlwaysOnTopRef =
+    typeof setAlwaysOnTop === 'function' ? setAlwaysOnTop : () => {};
   tray.setToolTip('GeminiHarness');
   refreshTrayMenu();
   attachTrayMenuRefresh(tray, refreshTrayMenu);

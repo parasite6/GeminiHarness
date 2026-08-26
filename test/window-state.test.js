@@ -44,6 +44,14 @@ describe('sanitizeState', () => {
     assert.equal('x' in state, false);
     assert.equal('y' in state, false);
   });
+
+  it('persists alwaysOnTop only as a boolean, defaulting off', () => {
+    assert.equal(defaultState().alwaysOnTop, false);
+    assert.equal(sanitizeState({}).alwaysOnTop, false);
+    assert.equal(sanitizeState({ alwaysOnTop: true }).alwaysOnTop, true);
+    assert.equal(sanitizeState({ alwaysOnTop: 'yes' }).alwaysOnTop, false);
+    assert.equal(sanitizeState({ alwaysOnTop: 1 }).alwaysOnTop, false);
+  });
 });
 
 describe('clampBoundsToDisplays', () => {
@@ -110,6 +118,7 @@ describe('load / save', () => {
       height: 800,
       isMaximized: true,
       zoomFactor: 1.2,
+      alwaysOnTop: true,
     };
     assert.equal(save(file, saved), true);
     const loaded = load(file, [DISPLAY_1920]);
@@ -119,6 +128,7 @@ describe('load / save', () => {
     assert.equal(loaded.height, 800);
     assert.equal(loaded.isMaximized, true);
     assert.equal(loaded.zoomFactor, 1.2);
+    assert.equal(loaded.alwaysOnTop, true);
   });
 
   it('returns defaults for a missing file', () => {

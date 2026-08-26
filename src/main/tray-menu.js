@@ -21,10 +21,22 @@ function shouldRebuildAutostartMenu(previousChecked, nextChecked) {
   return previousChecked !== nextChecked;
 }
 
+function readAlwaysOnTopChecked({ isAlwaysOnTop } = {}) {
+  if (typeof isAlwaysOnTop !== 'function') {
+    return false;
+  }
+  try {
+    return isAlwaysOnTop() === true;
+  } catch {
+    return false;
+  }
+}
+
 module.exports = {
   TRAY_MENU_REFRESH_EVENTS,
   AUTOSTART_MENU_SYNC_MS,
   refreshTrayContextMenu,
   attachTrayMenuRefresh,
   shouldRebuildAutostartMenu,
+  readAlwaysOnTopChecked,
 };
