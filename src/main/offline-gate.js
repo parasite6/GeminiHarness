@@ -84,6 +84,24 @@ function canBeginOfflineAttempt(inFlight) {
   return inFlight !== true;
 }
 
+function decideTitleBarReload({
+  inFlight,
+  gateActive,
+  isOfflinePage,
+  isAuthHost,
+}) {
+  if (!canBeginOfflineAttempt(inFlight)) {
+    return 'noop';
+  }
+  if (isAuthHost === true) {
+    return 'reload-current';
+  }
+  if (gateActive === true || isOfflinePage === true) {
+    return 'gated-load';
+  }
+  return 'probe-then-reload';
+}
+
 function shouldResumeOfflineRetry({ gateActive }) {
   return gateActive === true;
 }
@@ -179,6 +197,7 @@ module.exports = {
   shouldShowOfflineOnFail,
   shouldResumeOfflineRetry,
   canBeginOfflineAttempt,
+  decideTitleBarReload,
   interpretReachabilityResponse,
   offlinePagePath,
   isHarnessOfflinePage,

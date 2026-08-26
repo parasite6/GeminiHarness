@@ -15,6 +15,7 @@ const {
   offlinePagePath,
   isHarnessOfflinePage,
   canReachGemini,
+  decideTitleBarReload,
 } = require('../src/main/offline-gate');
 
 describe('offline-gate helpers', () => {
@@ -226,6 +227,71 @@ describe('offline-gate helpers', () => {
         fetchImpl: async () => ({ ok: true, status: 200 }),
       }),
       true,
+    );
+  });
+
+  it('routes title-bar reload through the launch gate while probing or offline', () => {
+    assert.equal(
+      decideTitleBarReload({
+        inFlight: true,
+        gateActive: true,
+        isOfflinePage: false,
+      }),
+      'noop',
+    );
+    assert.equal(
+      decideTitleBarReload({
+        inFlight: false,
+        gateActive: true,
+        isOfflinePage: false,
+      }),
+      'gated-load',
+    );
+    assert.equal(
+      decideTitleBarReload({
+        inFlight: false,
+        gateActive: false,
+        isOfflinePage: true,
+      }),
+      'gated-load',
+    );
+    assert.equal(
+      decideTitleBarReload({
+        inFlight: false,
+        gateActive: false,
+        isOfflinePage: false,
+      }),
+      'probe-then-reload',
+    );
+  });
+
+  it('reloads auth-allowlisted hosts without the Gemini offline probe', () => {
+    assert.equal(
+      decideTitleBarReload({
+        inFlight: false,
+        gateActive: false,
+        isOfflinePage: false,
+        isAuthHost: true,
+      }),
+      'reload-current',
+    );
+    assert.equal(
+      decideTitleBarReload({
+        inFlight: false,
+        gateActive: true,
+        isOfflinePage: false,
+        isAuthHost: true,
+      }),
+      'reload-current',
+    );
+    assert.equal(
+      decideTitleBarReload({
+        inFlight: true,
+        gateActive: false,
+        isOfflinePage: false,
+        isAuthHost: true,
+      }),
+      'noop',
     );
   });
 

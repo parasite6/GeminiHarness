@@ -1,4 +1,5 @@
-const { app, BrowserWindow, session, screen, net } = require('electron');
+const path = require('node:path');
+const { app, BrowserWindow, session, screen, net, ipcMain } = require('electron');
 const {
   load,
   save,
@@ -9,7 +10,13 @@ const {
   MAX_ZOOM,
   ZOOM_STEP,
 } = require('./window-state');
-const { buildTitleBarInsetCss } = require('./titlebar-inset');
+const {
+  buildTitleBarInsetCss,
+  buildTitleBarReloadScript,
+  TITLEBAR_RELOAD_CHANNEL,
+  shouldHonorTitleBarReloadIpc,
+  isTitleBarReloadAuthUrl,
+} = require('./titlebar-inset');
 const {
   START_URL,
   OFFLINE_RETRY_MS,
@@ -18,6 +25,7 @@ const {
   shouldShowOfflineOnFail,
   shouldResumeOfflineRetry,
   canBeginOfflineAttempt,
+  decideTitleBarReload,
   isHarnessOfflinePage,
   offlinePagePath,
   canReachGemini,
@@ -54,6 +62,7 @@ async function applyTitleBarInsetOnce(contents) {
       titleBarInsetCssKey = null;
     }
     titleBarInsetCssKey = await contents.insertCSS(css);
+    await contents.executeJavaScript(buildTitleBarReloadScript());
   } catch (error) {
     console.error('Failed to inset page for title bar overlay:', error);
   }
@@ -252,6 +261,74 @@ function resumeOfflineGateIfNeeded(win) {
   attemptGeminiLoad(win, { fromRetry: true });
 }
 
+async function handleTitleBarReload(win) {
+  if (!win || win.isDestroyed()) {
+    return;
+  }
+  const currentUrl = win.webContents.getURL();
+  const action = decideTitleBarReload({
+    inFlight: offlineAttemptInFlight,
+    gateActive: offlineGateActive,
+    isOfflinePage: isHarnessOfflinePage(currentUrl),
+    isAuthHost: isTitleBarReloadAuthUrl(currentUrl),
+  });
+  if (action === 'noop') {
+    return;
+  }
+  if (action === 'reload-current') {
+    win.webContents.reload();
+    return;
+  }
+  if (action === 'gated-load') {
+    await attemptGeminiLoad(win);
+    return;
+  }
+
+  if (!canBeginOfflineAttempt(offlineAttemptInFlight)) {
+    return;
+  }
+  offlineAttemptInFlight = true;
+  try {
+    if (!(await probeGemini(win))) {
+      await showOfflinePage(win);
+      if (win.isVisible()) {
+        startOfflineRetry(win);
+      }
+      return;
+    }
+  } finally {
+    offlineAttemptInFlight = false;
+  }
+  if (!win.isDestroyed()) {
+    win.webContents.reload();
+  }
+}
+
+function attachTitleBarReloadIpc() {
+  if (attachTitleBarReloadIpc.registered) {
+    return;
+  }
+  attachTitleBarReloadIpc.registered = true;
+  ipcMain.on(TITLEBAR_RELOAD_CHANNEL, (event) => {
+    const contents = event.sender;
+    const frame = event.senderFrame;
+    const isMainFrame = Boolean(
+      frame &&
+        contents &&
+        !contents.isDestroyed() &&
+        frame === contents.mainFrame,
+    );
+    if (!shouldHonorTitleBarReloadIpc({ isMainFrame })) {
+      return;
+    }
+    const win = BrowserWindow.fromWebContents(contents);
+    if (!win || win.isDestroyed() || win !== mainWindow) {
+      return;
+    }
+    handleTitleBarReload(win);
+  });
+}
+
 async function attemptGeminiLoad(win, { fromRetry = false } = {}) {
   if (!win || win.isDestroyed()) {
     return;
@@ -366,6 +443,7 @@ function createWindow() {
       height: TITLE_BAR_OVERLAY_HEIGHT,
     },
     webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -386,6 +464,7 @@ function createWindow() {
     applyTitleBarInset(win.webContents);
   });
 
+  attachTitleBarReloadIpc();
   attachStatePersistence(win);
   attachOfflineGate(win);
 

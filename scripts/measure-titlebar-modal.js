@@ -1,6 +1,10 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const { buildTitleBarInsetCss } = require('../src/main/titlebar-inset');
+const {
+  buildTitleBarInsetCss,
+  buildTitleBarReloadScript,
+  TITLEBAR_RELOAD_BUTTON_ID,
+} = require('../src/main/titlebar-inset');
 
 app.whenReady().then(async () => {
   const win = new BrowserWindow({
@@ -25,6 +29,7 @@ app.whenReady().then(async () => {
     color: '#131314',
   });
   await win.webContents.insertCSS(css);
+  await win.webContents.executeJavaScript(buildTitleBarReloadScript());
 
   // Replace fixture handlers with CDK's real scroll-position algorithm
   // (ViewportRuler: top = -documentElement.getBoundingClientRect().top).
@@ -59,6 +64,8 @@ app.whenReady().then(async () => {
       const hs = getComputedStyle(html);
       const bs = getComputedStyle(body);
       const hr = header.getBoundingClientRect();
+      const reload = document.getElementById(${JSON.stringify(TITLEBAR_RELOAD_BUTTON_ID)});
+      const reloadRect = reload ? reload.getBoundingClientRect() : null;
       return {
         label: ${JSON.stringify(label)},
         htmlPosition: hs.position,
@@ -68,6 +75,9 @@ app.whenReady().then(async () => {
         bodyTransform: bs.transform,
         headerTop: hr.top,
         scrollY: window.scrollY,
+        reloadCount: document.querySelectorAll('#' + ${JSON.stringify(TITLEBAR_RELOAD_BUTTON_ID)}).length,
+        reloadTop: reloadRect && reloadRect.top,
+        reloadHeight: reloadRect && reloadRect.height,
       };
     })()`);
   }
@@ -84,6 +94,16 @@ app.whenReady().then(async () => {
   if (Math.abs(delta) > 1) {
     console.error('FAIL: modal shifted header by', delta);
     app.exit(2);
+    return;
+  }
+  if (baseline.reloadCount !== 1 || modal.reloadCount !== 1) {
+    console.error('FAIL: expected one reload button', baseline.reloadCount, modal.reloadCount);
+    app.exit(3);
+    return;
+  }
+  if (baseline.reloadTop !== 0 || modal.reloadTop !== 0) {
+    console.error('FAIL: reload button moved', baseline.reloadTop, modal.reloadTop);
+    app.exit(4);
     return;
   }
   app.exit(0);
