@@ -21,15 +21,23 @@ function shouldRebuildAutostartMenu(previousChecked, nextChecked) {
   return previousChecked !== nextChecked;
 }
 
-function readAlwaysOnTopChecked({ isAlwaysOnTop } = {}) {
-  if (typeof isAlwaysOnTop !== 'function') {
+function readLiveChecked(getter) {
+  if (typeof getter !== 'function') {
     return false;
   }
   try {
-    return isAlwaysOnTop() === true;
+    return getter() === true;
   } catch {
     return false;
   }
+}
+
+function readAlwaysOnTopChecked({ isAlwaysOnTop } = {}) {
+  return readLiveChecked(isAlwaysOnTop);
+}
+
+function readSizeLockedChecked({ isSizeLocked } = {}) {
+  return readLiveChecked(isSizeLocked);
 }
 
 module.exports = {
@@ -39,4 +47,5 @@ module.exports = {
   attachTrayMenuRefresh,
   shouldRebuildAutostartMenu,
   readAlwaysOnTopChecked,
+  readSizeLockedChecked,
 };

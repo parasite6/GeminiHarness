@@ -19,6 +19,7 @@ function defaultState() {
     isMaximized: false,
     zoomFactor: 1,
     alwaysOnTop: false,
+    sizeLocked: false,
   };
 }
 
@@ -60,6 +61,7 @@ function sanitizeState(raw) {
     isMaximized: source.isMaximized === true,
     zoomFactor,
     alwaysOnTop: source.alwaysOnTop === true,
+    sizeLocked: source.sizeLocked === true,
   };
 
   if (x !== null && y !== null) {

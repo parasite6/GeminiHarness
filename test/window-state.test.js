@@ -52,6 +52,25 @@ describe('sanitizeState', () => {
     assert.equal(sanitizeState({ alwaysOnTop: 'yes' }).alwaysOnTop, false);
     assert.equal(sanitizeState({ alwaysOnTop: 1 }).alwaysOnTop, false);
   });
+
+  it('persists sizeLocked only as a boolean, defaulting off', () => {
+    assert.equal(defaultState().sizeLocked, false);
+    assert.equal(sanitizeState({}).sizeLocked, false);
+    assert.equal(sanitizeState({ sizeLocked: true }).sizeLocked, true);
+    assert.equal(sanitizeState({ sizeLocked: 'yes' }).sizeLocked, false);
+    assert.equal(sanitizeState({ sizeLocked: 1 }).sizeLocked, false);
+  });
+
+  it('does not alter saved width/height when sizeLocked is set', () => {
+    const state = sanitizeState({
+      width: 1100,
+      height: 800,
+      sizeLocked: true,
+    });
+    assert.equal(state.width, 1100);
+    assert.equal(state.height, 800);
+    assert.equal(state.sizeLocked, true);
+  });
 });
 
 describe('clampBoundsToDisplays', () => {
@@ -119,6 +138,7 @@ describe('load / save', () => {
       isMaximized: true,
       zoomFactor: 1.2,
       alwaysOnTop: true,
+      sizeLocked: true,
     };
     assert.equal(save(file, saved), true);
     const loaded = load(file, [DISPLAY_1920]);
@@ -129,6 +149,30 @@ describe('load / save', () => {
     assert.equal(loaded.isMaximized, true);
     assert.equal(loaded.zoomFactor, 1.2);
     assert.equal(loaded.alwaysOnTop, true);
+    assert.equal(loaded.sizeLocked, true);
+  });
+
+  it('keeps geometry when rewriting a size-locked state', () => {
+    const locked = {
+      x: 40,
+      y: 60,
+      width: 1100,
+      height: 800,
+      isMaximized: false,
+      zoomFactor: 1,
+      alwaysOnTop: false,
+      sizeLocked: true,
+    };
+    assert.equal(save(file, locked), true);
+    const first = load(file, [DISPLAY_1920]);
+    assert.equal(save(file, { ...first, alwaysOnTop: true }), true);
+    const second = load(file, [DISPLAY_1920]);
+    assert.equal(second.width, 1100);
+    assert.equal(second.height, 800);
+    assert.equal(second.x, 40);
+    assert.equal(second.y, 60);
+    assert.equal(second.sizeLocked, true);
+    assert.equal(second.alwaysOnTop, true);
   });
 
   it('returns defaults for a missing file', () => {

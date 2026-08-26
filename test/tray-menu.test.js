@@ -7,6 +7,7 @@ const {
   refreshTrayContextMenu,
   shouldRebuildAutostartMenu,
   readAlwaysOnTopChecked,
+  readSizeLockedChecked,
 } = require('../src/main/tray-menu');
 
 function fakeTray() {
@@ -86,6 +87,21 @@ describe('tray menu refresh', () => {
     assert.equal(
       readAlwaysOnTopChecked({
         isAlwaysOnTop() {
+          throw new Error('gone');
+        },
+      }),
+      false,
+    );
+  });
+
+  it('reads size-lock from live isResizable, not a cached flag', () => {
+    assert.equal(readSizeLockedChecked({ isSizeLocked: () => true }), true);
+    assert.equal(readSizeLockedChecked({ isSizeLocked: () => false }), false);
+    assert.equal(readSizeLockedChecked({ isSizeLocked: () => 1 }), false);
+    assert.equal(readSizeLockedChecked({}), false);
+    assert.equal(
+      readSizeLockedChecked({
+        isSizeLocked() {
           throw new Error('gone');
         },
       }),

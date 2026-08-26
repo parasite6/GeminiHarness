@@ -16,6 +16,7 @@ const {
   refreshTrayContextMenu,
   shouldRebuildAutostartMenu,
   readAlwaysOnTopChecked,
+  readSizeLockedChecked,
 } = require('./tray-menu');
 
 let tray = null;
@@ -24,6 +25,8 @@ let autostartSyncTimer = null;
 let showWindowRef = null;
 let isAlwaysOnTopRef = () => false;
 let setAlwaysOnTopRef = () => {};
+let isSizeLockedRef = () => false;
+let setSizeLockedRef = () => {};
 let lastAutostartChecked = null;
 
 function resolveTrayIconPath() {
@@ -76,6 +79,9 @@ function refreshTrayMenu() {
       hotkeyChecked: readHotkeyEnabledSafe(),
       alwaysOnTopChecked: readAlwaysOnTopChecked({
         isAlwaysOnTop: isAlwaysOnTopRef,
+      }),
+      sizeLockedChecked: readSizeLockedChecked({
+        isSizeLocked: isSizeLockedRef,
       }),
     }),
   );
@@ -140,6 +146,9 @@ function buildTrayMenu({
   alwaysOnTopChecked = readAlwaysOnTopChecked({
     isAlwaysOnTop: isAlwaysOnTopRef,
   }),
+  sizeLockedChecked = readSizeLockedChecked({
+    isSizeLocked: isSizeLockedRef,
+  }),
 }) {
   return Menu.buildFromTemplate([
     {
@@ -200,6 +209,15 @@ function buildTrayMenu({
         refreshTrayMenu();
       },
     },
+    {
+      label: 'Lock Window Size',
+      type: 'checkbox',
+      checked: sizeLockedChecked,
+      click: (item) => {
+        setSizeLockedRef(item.checked);
+        refreshTrayMenu();
+      },
+    },
     { type: 'separator' },
     {
       label: 'Quit Gemini',
@@ -210,7 +228,13 @@ function buildTrayMenu({
   ]);
 }
 
-function createTray({ showWindow, isAlwaysOnTop, setAlwaysOnTop }) {
+function createTray({
+  showWindow,
+  isAlwaysOnTop,
+  setAlwaysOnTop,
+  isSizeLocked,
+  setSizeLocked,
+}) {
   if (tray) {
     return tray;
   }
@@ -236,6 +260,10 @@ function createTray({ showWindow, isAlwaysOnTop, setAlwaysOnTop }) {
     typeof isAlwaysOnTop === 'function' ? isAlwaysOnTop : () => false;
   setAlwaysOnTopRef =
     typeof setAlwaysOnTop === 'function' ? setAlwaysOnTop : () => {};
+  isSizeLockedRef =
+    typeof isSizeLocked === 'function' ? isSizeLocked : () => false;
+  setSizeLockedRef =
+    typeof setSizeLocked === 'function' ? setSizeLocked : () => {};
   tray.setToolTip('GeminiHarness');
   refreshTrayMenu();
   attachTrayMenuRefresh(tray, refreshTrayMenu);

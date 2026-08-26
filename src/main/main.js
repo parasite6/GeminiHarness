@@ -9,6 +9,8 @@ const {
   hasWindowEverShown,
   isMainWindowAlwaysOnTop,
   setMainWindowAlwaysOnTop,
+  isMainWindowSizeLocked,
+  setMainWindowSizeLocked,
 } = require('./window');
 const { attachNavigationHandlers } = require('./navigation');
 const { createTray, getTray } = require('./tray');
@@ -78,6 +80,8 @@ app.whenReady().then(() => {
     showWindow: showMainWindow,
     isAlwaysOnTop: isMainWindowAlwaysOnTop,
     setAlwaysOnTop: setMainWindowAlwaysOnTop,
+    isSizeLocked: isMainWindowSizeLocked,
+    setSizeLocked: setMainWindowSizeLocked,
   });
   if (shouldQuitHiddenWithoutTray({ hidden, tray: trayIcon })) {
     console.error(

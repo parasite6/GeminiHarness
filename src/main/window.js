@@ -112,6 +112,7 @@ function collectWindowState(win) {
     isMaximized: win.isMaximized(),
     zoomFactor: win.webContents.getZoomFactor(),
     alwaysOnTop: win.isAlwaysOnTop() === true,
+    sizeLocked: win.isResizable() === false,
   };
 }
 
@@ -151,6 +152,29 @@ function setMainWindowAlwaysOnTop(value) {
   const state = load(persistedPath, currentDisplays());
   save(persistedPath, { ...state, alwaysOnTop: onTop });
   return onTop;
+}
+
+function isMainWindowSizeLocked() {
+  const win = mainWindow;
+  if (win && !win.isDestroyed()) {
+    return win.isResizable() === false;
+  }
+  ensurePersistedPath();
+  return load(persistedPath, currentDisplays()).sizeLocked === true;
+}
+
+function setMainWindowSizeLocked(value) {
+  const locked = value === true;
+  const win = mainWindow;
+  if (win && !win.isDestroyed()) {
+    win.setResizable(!locked);
+    persist();
+    return win.isResizable() === false;
+  }
+  ensurePersistedPath();
+  const state = load(persistedPath, currentDisplays());
+  save(persistedPath, { ...state, sizeLocked: locked });
+  return locked;
 }
 
 function scheduleSave() {
@@ -492,6 +516,9 @@ function createWindow() {
   if (state.alwaysOnTop) {
     win.setAlwaysOnTop(true);
   }
+  if (state.sizeLocked) {
+    win.setResizable(false);
+  }
 
   win.webContents.on('dom-ready', () => {
     // Replace inset via removeInsertedCSS inside applyTitleBarInset —
@@ -568,4 +595,6 @@ module.exports = {
   hasWindowEverShown,
   isMainWindowAlwaysOnTop,
   setMainWindowAlwaysOnTop,
+  isMainWindowSizeLocked,
+  setMainWindowSizeLocked,
 };
