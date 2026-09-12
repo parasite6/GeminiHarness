@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Installed as /usr/share/metainfo/io.github.parasite6.geminiharness.metainfo.xml.
-     Launchable stays geminiharness.desktop (electron-builder desktopName). -->
+<!-- Flatpak / Flathub copy. Component id matches the Flatpak app-id.
+     Fedora/COPR still ships io.github.parasite6.geminiharness.metainfo.xml
+     with launchable geminiharness.desktop. -->
 <component type="desktop-application">
-  <id>io.github.parasite6.geminiharness</id>
+  <id>io.github.parasite6.GeminiHarness</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
   <name>GeminiHarness</name>
@@ -21,11 +22,18 @@
       restarts.
     </p>
     <p>
-      The tray icon needs GNOME’s AppIndicator extension. The app runs
-      under XWayland so window position can be restored.
+      The tray icon needs a StatusNotifier host (GNOME’s AppIndicator
+      extension, or KDE). The app runs under X11/XWayland so window
+      position can be restored.
     </p>
   </description>
-  <launchable type="desktop-id">geminiharness.desktop</launchable>
+  <launchable type="desktop-id">io.github.parasite6.GeminiHarness.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/parasite6/GeminiHarness/sanctuary/flatpak/screenshots/window.png</image>
+      <caption>A logged-in gemini.google.com session in the GeminiHarness window</caption>
+    </screenshot>
+  </screenshots>
   <url type="homepage">https://github.com/parasite6/GeminiHarness</url>
   <url type="bugtracker">https://github.com/parasite6/GeminiHarness/issues</url>
   <url type="vcs-browser">https://github.com/parasite6/GeminiHarness</url>

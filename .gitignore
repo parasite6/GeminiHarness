@@ -4,3 +4,5 @@ dist/
 .cursor/
 *.log
 *.tmp
+.flatpak-builder/
+.flatpak-builder-build/

@@ -79,4 +79,47 @@ describe('linux packaging desktop entry', () => {
     }
     assert.equal(cli.status, 0, `${cli.stdout}${cli.stderr}`);
   });
+
+  it('ships a Flatpak manifest using Electron2.BaseApp', () => {
+    const ymlPath = path.join(
+      root,
+      'flatpak',
+      'io.github.parasite6.GeminiHarness.yml',
+    );
+    const desktopPath = path.join(
+      root,
+      'flatpak',
+      'io.github.parasite6.GeminiHarness.desktop',
+    );
+    const metainfoPath = path.join(
+      root,
+      'flatpak',
+      'io.github.parasite6.GeminiHarness.metainfo.xml',
+    );
+    assert.equal(fs.existsSync(ymlPath), true);
+    assert.equal(fs.existsSync(desktopPath), true);
+    assert.equal(fs.existsSync(metainfoPath), true);
+
+    const yml = fs.readFileSync(ymlPath, 'utf8');
+    assert.match(yml, /^app-id:\s*io\.github\.parasite6\.GeminiHarness$/m);
+    assert.match(yml, /^base:\s*org\.electronjs\.Electron2\.BaseApp$/m);
+    assert.match(yml, /^runtime:\s*org\.freedesktop\.Platform$/m);
+    assert.match(yml, /^runtime-version:\s*'25\.08'$/m);
+    assert.match(yml, /^\s+tag:\s*v1\.1\.1$/m);
+
+    const desktop = fs.readFileSync(desktopPath, 'utf8');
+    assert.match(desktop, /^Exec=geminiharness$/m);
+    assert.match(desktop, /^Icon=io\.github\.parasite6\.GeminiHarness$/m);
+    assert.match(desktop, /^StartupWMClass=GeminiHarness$/m);
+
+    const metainfo = fs.readFileSync(metainfoPath, 'utf8');
+    assert.match(
+      metainfo,
+      /<id>io\.github\.parasite6\.GeminiHarness<\/id>/,
+    );
+    assert.match(
+      metainfo,
+      /<launchable type="desktop-id">io\.github\.parasite6\.GeminiHarness\.desktop<\/launchable>/,
+    );
+  });
 });

@@ -1,0 +1,101 @@
+name: Flatpak
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Point manifest at this git tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          commit="$(git rev-parse HEAD)"
+          python3 - "$tag" "$commit" <<'PY'
+          import pathlib, sys
+          tag, commit = sys.argv[1], sys.argv[2]
+          path = pathlib.Path("flatpak/io.github.parasite6.GeminiHarness.yml")
+          text = path.read_text()
+          out = []
+          for line in text.splitlines(True):
+              if line.startswith("        tag:"):
+                  line = f"        tag: {tag}\n"
+              elif line.startswith("        commit:"):
+                  line = f"        commit: {commit}\n"
+              out.append(line)
+          path.write_text("".join(out))
+          PY
+
+      - name: Install flatpak-node-generator
+        run: |
+          pipx install \
+            'git+https://github.com/flatpak/flatpak-builder-tools.git#subdirectory=node'
+
+      - name: Regenerate npm sources
+        run: |
+          set -euo pipefail
+          cd flatpak
+          flatpak-node-generator npm ../package-lock.json \
+            --electron-node-headers \
+            --node-sdk-extension org.freedesktop.Sdk.Extension.node22//25.08 \
+            -o generated-sources.json
+
+      - name: Build Flatpak
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: io.github.parasite6.GeminiHarness.flatpak
+          manifest-path: flatpak/io.github.parasite6.GeminiHarness.yml
+          cache: true
+          restore-cache: true
+          upload-artifact: true
+
+      - name: Push updated manifest to Flathub if the app repo exists
+        env:
+          GH_TOKEN: ${{ secrets.FLATHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "FLATHUB_TOKEN is not set; skipping Flathub repo update."
+            echo "After Flathub merges the first submission, add a PAT with"
+            echo "write access to flathub/io.github.parasite6.GeminiHarness"
+            echo "as the FLATHUB_TOKEN repository secret."
+            exit 0
+          fi
+          if ! gh api repos/flathub/io.github.parasite6.GeminiHarness >/dev/null 2>&1; then
+            echo "flathub/io.github.parasite6.GeminiHarness does not exist yet; skip."
+            exit 0
+          fi
+          workdir="$(mktemp -d)"
+          gh repo clone flathub/io.github.parasite6.GeminiHarness "$workdir"
+          cp -a \
+            flatpak/io.github.parasite6.GeminiHarness.yml \
+            flatpak/io.github.parasite6.GeminiHarness.desktop \
+            flatpak/io.github.parasite6.GeminiHarness.metainfo.xml \
+            flatpak/generated-sources.json \
+            "$workdir/"
+          git -C "$workdir" config user.name "github-actions[bot]"
+          git -C "$workdir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$workdir" add \
+            io.github.parasite6.GeminiHarness.yml \
+            io.github.parasite6.GeminiHarness.desktop \
+            io.github.parasite6.GeminiHarness.metainfo.xml \
+            generated-sources.json
+          if git -C "$workdir" diff --cached --quiet; then
+            echo "Flathub repo already matches this tag."
+            exit 0
+          fi
+          tag="${GITHUB_REF_NAME}"
+          git -C "$workdir" commit -m "Update io.github.parasite6.GeminiHarness to ${tag}"
+          git -C "$workdir" push origin HEAD:master
