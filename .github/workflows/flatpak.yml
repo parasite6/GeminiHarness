@@ -84,6 +84,7 @@ jobs:
             flatpak/io.github.parasite6.GeminiHarness.desktop \
             flatpak/io.github.parasite6.GeminiHarness.metainfo.xml \
             flatpak/generated-sources.json \
+            flatpak/flathub.json \
             "$workdir/"
           git -C "$workdir" config user.name "github-actions[bot]"
           git -C "$workdir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -91,7 +92,8 @@ jobs:
             io.github.parasite6.GeminiHarness.yml \
             io.github.parasite6.GeminiHarness.desktop \
             io.github.parasite6.GeminiHarness.metainfo.xml \
-            generated-sources.json
+            generated-sources.json \
+            flathub.json
           if git -C "$workdir" diff --cached --quiet; then
             echo "Flathub repo already matches this tag."
             exit 0
