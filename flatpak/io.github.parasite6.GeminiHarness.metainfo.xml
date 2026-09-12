@@ -30,7 +30,7 @@
   <launchable type="desktop-id">io.github.parasite6.GeminiHarness.desktop</launchable>
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/parasite6/GeminiHarness/sanctuary/flatpak/screenshots/window.png</image>
+      <image>https://raw.githubusercontent.com/parasite6/GeminiHarness/7bf3a8bc6bfd64b30f73298d207fa0f7a1d45ace/flatpak/screenshots/window.png</image>
       <caption>A logged-in gemini.google.com session in the GeminiHarness window</caption>
     </screenshot>
   </screenshots>
