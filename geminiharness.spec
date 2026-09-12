@@ -92,6 +92,11 @@ test -x %{buildroot}/opt/GeminiHarness/%{name}
 test -f %{buildroot}%{_datadir}/applications/%{name}.desktop
 test -f %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/%{name}.svg
 
+# AppStream / GNOME Software: not produced by electron-builder's RPM.
+install -D -m 644 io.github.parasite6.geminiharness.metainfo.xml \
+  %{buildroot}%{_datadir}/metainfo/io.github.parasite6.geminiharness.metainfo.xml
+test -f %{buildroot}%{_datadir}/metainfo/io.github.parasite6.geminiharness.metainfo.xml
+
 # Record every path from the nested package for %files (keeps COPR identical
 # to electron-builder's file set, including Chromium payloads under /opt).
 ( cd %{buildroot} && find . -mindepth 1 \( -type f -o -type l \) ) \
